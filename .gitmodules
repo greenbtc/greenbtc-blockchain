@@ -1,0 +1,8 @@
+[submodule "greenbtc-blockchain-gui"]
+	path = greenbtc-blockchain-gui
+	url = https://github.com/greenbtc/greenbtc-blockchain-gui.git
+	branch = main
+[submodule "mozilla-ca"]
+	path = mozilla-ca
+	url = https://github.com/chia-network/mozilla-ca.git
+	branch = main
