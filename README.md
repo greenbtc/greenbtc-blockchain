@@ -19,7 +19,7 @@ Please visit our wiki for more information:
 
 ## Resource Links
 
-Staking, You need 1 coin for your 1TB of farming netspace.
+Staking, You need 2 coin for your 1TB of farming netspace.
 
 GreenBTC Website: https://greenbtc.top
 
