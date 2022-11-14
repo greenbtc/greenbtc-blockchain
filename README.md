@@ -28,7 +28,7 @@ GreenBTC Website: https://greenbtc.top
 1. Query the staking balance:
 
    ```
-   $ greenbtc wallet staking_info
+   $ greenbtc staking info
    ...
    Staking balance:  0
    Staking address:  gbtc16h0zj4q0uyt3frl7tmcy9whl30xv75g7qqcgulwht79a04ahxyrsmf56se
@@ -38,13 +38,13 @@ GreenBTC Website: https://greenbtc.top
 2. Send coins to the staking:
 
    ```
-   $ greenbtc wallet staking -a 1
+   $ greenbtc staking send -a 1
    ```
 
    Wait for the transaction get confirmed, query staking balance again:
 
    ```
-   $ greenbtc wallet staking_info
+   $ greenbtc staking info
    ...
    Staking balance:  1
    Staking address:  gbtc16h0zj4q0uyt3frl7tmcy9whl30xv75g7qqcgulwht79a04ahxyrsmf56se
@@ -54,7 +54,7 @@ GreenBTC Website: https://greenbtc.top
 3. Withdraw coins from the staking address:
 
    ```
-   $ greenbtc wallet staking_withdraw -a 1
+   $ greenbtc staking withdraw -a 1
    ```
 
    Do a transaction to transfer the coins from the staking address to now wallet receive address.
