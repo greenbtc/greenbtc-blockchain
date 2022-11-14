@@ -54,9 +54,7 @@ GreenBTC Website: https://greenbtc.top
 3. Withdraw coins from the staking address:
 
    ```
-   $ greenbtc staking withdraw -a 1
+   $ greenbtc staking withdraw
    ```
 
    Do a transaction to transfer the coins from the staking address to now wallet receive address.
-
-   Make sure to choose the wallet that contains the plot farmer key.
