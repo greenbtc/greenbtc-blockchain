@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -12,8 +10,8 @@ from greenbtc.types.blockchain_format.slots import (
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class EndOfSubSlotBundle(Streamable):
     challenge_chain: ChallengeChainSubSlot
     infused_challenge_chain: Optional[InfusedChallengeChainSubSlot]

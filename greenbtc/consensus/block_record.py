@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -15,8 +13,8 @@ from greenbtc.util.ints import uint8, uint32, uint64, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class BlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
@@ -58,8 +56,8 @@ class BlockRecord(Streamable):
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
-    # the mining farmer's public key puzzle hash
-    farmer_pk_ph: bytes32
+    # the mining farmer's public key
+    farmer_public_key: G1Element
 
     @property
     def is_transaction_block(self) -> bool:
@@ -92,5 +90,5 @@ class BlockRecord(Streamable):
             self.required_iters,
         )
 
-    def sp_total_iters(self, constants: ConsensusConstants) -> uint128:
-        return uint128(self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants))
+    def sp_total_iters(self, constants: ConsensusConstants):
+        return self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants)

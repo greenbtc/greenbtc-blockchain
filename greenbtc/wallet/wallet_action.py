@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -14,7 +12,7 @@ class WalletAction:
 
     Purpose:
     Some wallets require wallet node to perform a certain action when event happens.
-    For Example, CAT wallet needs to fetch solutions once it receives a coin.
+    For Example, coloured coin wallet needs to fetch solutions once it receives a coin.
     In order to be safe from losing connection, closing the app, etc, those actions need to be persisted.
 
     id: auto-incremented for every added action

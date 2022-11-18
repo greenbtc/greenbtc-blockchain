@@ -1,8 +1,10 @@
-from __future__ import annotations
-
 from typing import Any
 
-from greenbtc.util.db_wrapper import DBWrapper2
+import aiosqlite
+
+from greenbtc.util.byte_types import hexstr_to_bytes
+from greenbtc.util.db_wrapper import DBWrapper
+from greenbtc.util.streamable import Streamable
 
 
 class KeyValStore:
@@ -10,46 +12,50 @@ class KeyValStore:
     Multipurpose persistent key-value store
     """
 
-    db_wrapper: DBWrapper2
+    db_connection: aiosqlite.Connection
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
         self.db_wrapper = db_wrapper
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value blob)")
+        self.db_connection = db_wrapper.db
+        await self.db_connection.execute(
+            ("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value text)")
+        )
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS key_val_name on key_val_store(key)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on key_val_store(key)")
 
+        await self.db_connection.commit()
         return self
 
-    async def get_object(self, key: str, object_type: Any) -> Any:
+    async def _clear_database(self):
+        cursor = await self.db_connection.execute("DELETE FROM key_val_store")
+        await cursor.close()
+        await self.db_connection.commit()
+
+    async def get_object(self, key: str, type: Any) -> Any:
         """
         Return bytes representation of stored object
         """
 
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from key_val_store WHERE key=?", (key,))
-            row = await cursor.fetchone()
-            await cursor.close()
+        cursor = await self.db_connection.execute("SELECT * from key_val_store WHERE key=?", (key,))
+        row = await cursor.fetchone()
+        await cursor.close()
 
         if row is None:
             return None
 
-        return object_type.from_bytes(row[1])
+        return type.from_bytes(hexstr_to_bytes(row[1]))
 
-    async def set_object(self, key: str, obj: Any):
+    async def set_object(self, key: str, obj: Streamable):
         """
-        Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
+        Adds object to key val store
         """
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
+        async with self.db_wrapper.lock:
+            cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-                (key, bytes(obj)),
+                (key, bytes(obj).hex()),
             )
             await cursor.close()
-
-    async def remove_object(self, key: str):
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute("DELETE FROM key_val_store where key=?", (key,))
-            await cursor.close()
+            await self.db_connection.commit()

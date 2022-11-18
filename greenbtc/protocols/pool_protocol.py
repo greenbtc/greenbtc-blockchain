@@ -33,8 +33,8 @@ class PoolErrorCode(Enum):
 
 
 # Used to verify GET /farmer and GET /login
-@streamable
 @dataclass(frozen=True)
+@streamable
 class AuthenticationPayload(Streamable):
     method_name: str
     launcher_id: bytes32
@@ -43,8 +43,8 @@ class AuthenticationPayload(Streamable):
 
 
 # GET /pool_info
-@streamable
 @dataclass(frozen=True)
+@streamable
 class GetPoolInfoResponse(Streamable):
     name: str
     logo_url: str
@@ -60,8 +60,8 @@ class GetPoolInfoResponse(Streamable):
 # POST /partial
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostPartialPayload(Streamable):
     launcher_id: bytes32
     authentication_token: uint64
@@ -71,16 +71,16 @@ class PostPartialPayload(Streamable):
     harvester_id: bytes32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostPartialRequest(Streamable):
     payload: PostPartialPayload
     aggregate_signature: G2Element
 
 
 # Response in success case
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostPartialResponse(Streamable):
     new_difficulty: uint64
 
@@ -89,8 +89,8 @@ class PostPartialResponse(Streamable):
 
 
 # Response in success case
-@streamable
 @dataclass(frozen=True)
+@streamable
 class GetFarmerResponse(Streamable):
     authentication_public_key: G1Element
     payout_instructions: str
@@ -101,8 +101,8 @@ class GetFarmerResponse(Streamable):
 # POST /farmer
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostFarmerPayload(Streamable):
     launcher_id: bytes32
     authentication_token: uint64
@@ -111,16 +111,16 @@ class PostFarmerPayload(Streamable):
     suggested_difficulty: Optional[uint64]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostFarmerRequest(Streamable):
     payload: PostFarmerPayload
     signature: G2Element
 
 
 # Response in success case
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PostFarmerResponse(Streamable):
     welcome_message: str
 
@@ -128,8 +128,8 @@ class PostFarmerResponse(Streamable):
 # PUT /farmer
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PutFarmerPayload(Streamable):
     launcher_id: bytes32
     authentication_token: uint64
@@ -138,16 +138,16 @@ class PutFarmerPayload(Streamable):
     suggested_difficulty: Optional[uint64]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PutFarmerRequest(Streamable):
     payload: PutFarmerPayload
     signature: G2Element
 
 
 # Response in success case
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PutFarmerResponse(Streamable):
     authentication_public_key: Optional[bool]
     payout_instructions: Optional[bool]
@@ -158,14 +158,14 @@ class PutFarmerResponse(Streamable):
 
 
 # Response in error case for all endpoints of the pool protocol
-@streamable
 @dataclass(frozen=True)
+@streamable
 class ErrorResponse(Streamable):
     error_code: uint16
     error_message: Optional[str]
 
 
-# Get the current authentication token according to "Farmer authentication" in SPECIFICATION.md
+# Get the current authentication toke according "Farmer authentication" in SPECIFICATION.md
 def get_current_authentication_token(timeout: uint8) -> uint64:
     return uint64(int(int(time.time() / 60) / timeout))
 

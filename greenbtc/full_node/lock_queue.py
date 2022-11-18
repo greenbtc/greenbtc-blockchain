@@ -1,10 +1,9 @@
-from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
 import traceback
-from types import TracebackType
 from typing import Awaitable, Callable
+
 
 log = logging.getLogger(__name__)
 
@@ -34,21 +33,21 @@ class LockQueue:
 
     def __init__(self, inner_lock: asyncio.Lock):
         self._inner_lock: asyncio.Lock = inner_lock
-        self._task_queue: asyncio.PriorityQueue[PrioritizedCallable] = asyncio.PriorityQueue()
+        self._task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._run_task = asyncio.create_task(self._run())
         self._release_event = asyncio.Event()
 
-    async def put(self, priority: int, callback: Callable[[], Awaitable[object]]) -> None:
+    async def put(self, priority: int, callback: Callable[[], Awaitable[object]]):
         await self._task_queue.put(PrioritizedCallable(priority=priority, af=callback))
 
-    async def acquire(self) -> None:
+    async def acquire(self):
         await self._inner_lock.acquire()
 
-    def release(self) -> None:
+    def release(self):
         self._inner_lock.release()
         self._release_event.set()
 
-    async def _run(self) -> None:
+    async def _run(self):
         try:
             while True:
                 prioritized_callback = await self._task_queue.get()
@@ -60,10 +59,10 @@ class LockQueue:
             error_stack = traceback.format_exc()
             log.debug(f"LockQueue._run() cancelled: {error_stack}")
 
-    def close(self) -> None:
+    def close(self):
         self._run_task.cancel()
 
-    async def await_closed(self) -> None:
+    async def await_closed(self):
         await self._run_task
 
 
@@ -72,18 +71,15 @@ class LockClient:
         self._priority = priority
         self._queue = queue
 
-    async def __aenter__(self) -> None:
+    async def __aenter__(self):
         called: asyncio.Event = asyncio.Event()
 
         # Use a parameter default to avoid a closure
-        async def callback(called_inner: asyncio.Event = called) -> None:
-            called_inner.set()
+        async def callback(called=called) -> None:
+            called.set()
 
         await self._queue.put(priority=self._priority, callback=callback)
         await called.wait()
 
-    async def __aexit__(
-        self, typ: type[BaseException] | None, value: BaseException | None, traceback: TracebackType | None
-    ) -> bool | None:
+    async def __aexit__(self, exc_type, exc, tb):
         self._queue.release()
-        return None

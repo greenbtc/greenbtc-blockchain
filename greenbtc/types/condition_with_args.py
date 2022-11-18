@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List
 
@@ -7,8 +5,8 @@ from greenbtc.types.condition_opcodes import ConditionOpcode
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class ConditionWithArgs(Streamable):
     """
     This structure is used to store parsed CLVM conditions

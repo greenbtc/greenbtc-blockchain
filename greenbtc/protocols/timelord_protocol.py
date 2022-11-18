@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -18,11 +16,12 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewPeakTimelord(Streamable):
     reward_chain_block: RewardChainBlock
     difficulty: uint64
+    difficulty_coefficient: str
     deficit: uint8
     sub_slot_iters: uint64  # SSi in the slot where NewPeak has been infused
     sub_epoch_summary: Optional[
@@ -31,11 +30,10 @@ class NewPeakTimelord(Streamable):
     previous_reward_challenges: List[Tuple[bytes32, uint128]]
     last_challenge_sb_or_eos_total_iters: uint128
     passes_ses_height_but_not_yet_included: bool
-    difficulty_coefficient: str
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewUnfinishedBlockTimelord(Streamable):
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
@@ -48,8 +46,8 @@ class NewUnfinishedBlockTimelord(Streamable):
     difficulty_coefficient: str
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewInfusionPointVDF(Streamable):
     unfinished_reward_hash: bytes32
     challenge_chain_ip_vdf: VDFInfo
@@ -60,8 +58,8 @@ class NewInfusionPointVDF(Streamable):
     infused_challenge_chain_ip_proof: Optional[VDFProof]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewSignagePointVDF(Streamable):
     index_from_challenge: uint8
     challenge_chain_sp_vdf: VDFInfo
@@ -70,14 +68,14 @@ class NewSignagePointVDF(Streamable):
     reward_chain_sp_proof: VDFProof
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewEndOfSubSlotVDF(Streamable):
     end_of_sub_slot_bundle: EndOfSubSlotBundle
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestCompactProofOfTime(Streamable):
     new_proof_of_time: VDFInfo
     header_hash: bytes32
@@ -85,8 +83,8 @@ class RequestCompactProofOfTime(Streamable):
     field_vdf: uint8
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondCompactProofOfTime(Streamable):
     vdf_info: VDFInfo
     vdf_proof: VDFProof

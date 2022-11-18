@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -12,8 +10,8 @@ from greenbtc.util.ints import uint32
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb

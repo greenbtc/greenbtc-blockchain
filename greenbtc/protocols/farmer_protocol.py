@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
-from blspy import G2Element, G1Element
+from blspy import G1Element, G2Element
 
 from greenbtc.types.blockchain_format.pool_target import PoolTarget
 from greenbtc.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -17,8 +15,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewSignagePoint(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
@@ -28,8 +26,8 @@ class NewSignagePoint(Streamable):
     signage_point_index: uint8
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class DeclareProofOfSpace(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
@@ -43,16 +41,16 @@ class DeclareProofOfSpace(Streamable):
     pool_signature: Optional[G2Element]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class FarmingInfo(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
@@ -62,24 +60,24 @@ class FarmingInfo(Streamable):
     total_plots: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_signature: G2Element
     foliage_transaction_block_signature: G2Element
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class FarmerStakings(Streamable):
-    stakings: List[Tuple[bytes32, str]]
+    stakings: List[Tuple[G1Element, str]]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestStakings(Streamable):
-    puzzle_hashes: List[bytes32]
+    public_keys: List[G1Element]
     # None means current peak
     height: Optional[uint32]
     # wallet can calculate this on itself

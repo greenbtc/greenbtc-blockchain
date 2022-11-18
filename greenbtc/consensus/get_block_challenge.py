@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import List, Union
 
@@ -60,7 +58,7 @@ def get_block_challenge(
     genesis_block: bool,
     overflow: bool,
     skip_overflow_last_ss_validation: bool,
-) -> bytes32:
+):
     if len(header_block.finished_sub_slots) > 0:
         if overflow:
             # New sub-slot with overflow block

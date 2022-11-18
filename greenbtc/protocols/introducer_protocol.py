@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List
 
@@ -12,15 +10,15 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestPeersIntroducer(Streamable):
     """
     Return full list of peers
     """
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondPeersIntroducer(Streamable):
     peer_list: List[TimestampedPeerInfo]

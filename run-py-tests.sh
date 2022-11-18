@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -o errexit
-
 python3 -m venv venv
 # shellcheck disable=SC1091
 . ./activate

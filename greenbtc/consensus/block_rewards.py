@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from greenbtc.util.ints import uint32, uint64
 
 # 1 GreenBTC coin = 1,000,000,000,000 = 1 trillion mojo.

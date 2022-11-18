@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -7,8 +5,8 @@ from greenbtc.types.blockchain_format.vdf import VDFInfo, VDFProof
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SignagePoint(Streamable):
     cc_vdf: Optional[VDFInfo]
     cc_proof: Optional[VDFProof]

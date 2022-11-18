@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from greenbtc.consensus.constants import ConsensusConstants
@@ -7,8 +5,8 @@ from greenbtc.types.blockchain_format.sized_bytes import bytes100
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class ClassgroupElement(Streamable):
     """
     Represents a classgroup element (a,b,c) where a, b, and c are 512 bit signed integers. However this is using

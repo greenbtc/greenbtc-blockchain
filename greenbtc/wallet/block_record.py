@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List
 
@@ -8,8 +6,8 @@ from greenbtc.types.header_block import HeaderBlock
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class HeaderBlockRecord(Streamable):
     """
     These are values that are stored in the wallet database, corresponding to information

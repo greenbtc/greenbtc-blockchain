@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from decimal import Decimal
 from typing import Optional, Tuple, Union
 
@@ -16,6 +14,7 @@ def iters_from_block(
     difficulty: uint64,
     difficulty_coefficient: Decimal,
 ) -> Tuple[uint64, uint64]:
+    assert isinstance(difficulty_coefficient, Decimal)
     if reward_chain_block.challenge_chain_sp_vdf is None:
         assert reward_chain_block.signage_point_index == 0
         cc_sp: bytes32 = reward_chain_block.pos_ss_cc_challenge_hash
@@ -34,8 +33,8 @@ def iters_from_block(
         quality_string,
         reward_chain_block.proof_of_space.size,
         difficulty,
-        cc_sp,
         difficulty_coefficient,
+        cc_sp,
     )
     return (
         calculate_sp_iters(constants, sub_slot_iters, reward_chain_block.signage_point_index),

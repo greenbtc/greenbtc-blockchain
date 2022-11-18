@@ -1,19 +1,17 @@
-from __future__ import annotations
-
 from greenbtc.util.ints import uint64
 
 from .constants import ConsensusConstants
 
-default_kwargs = {
+testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
     "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 16,  # Must be less than half of SLOT_BLOCKS_TARGET
     "MAX_SUB_SLOT_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_BLOCKS
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
-    "SUB_SLOT_ITERS_STARTING": 2**27,
+    "SUB_SLOT_ITERS_STARTING": 2 ** 27,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_CONSTANT_FACTOR": 2**57,
-    "DIFFICULTY_STARTING": 5,
+    "DIFFICULTY_CONSTANT_FACTOR": 2 ** 60,
+    "DIFFICULTY_STARTING": 128,
     "DIFFICULTY_CHANGE_MAX_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_BLOCKS": 384,  # The number of blocks per sub-epoch, mainnet 384
@@ -40,8 +38,8 @@ default_kwargs = {
         "8b161e224bb1339e5a370581318e56f30973f4806703d12ac6c65119adb26808"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Size of mempool = 50x the size of block+
-    "MEMPOOL_BLOCK_BUFFER": 50,
+    # Size of mempool = 50x the size of block # temporary change until #9125 gets in
+    "MEMPOOL_BLOCK_BUFFER": 10,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
@@ -49,15 +47,15 @@ default_kwargs = {
     # The cost per byte of generator program
     "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": 4608 * 3 + (128 * 4),
+    "STAKING_ESTIMATE_BLOCK_RANGE": 4608 * 3,
+    "BLOCKS_CACHE_SIZE": 4608 * 3 + (128 * 4),  # should be bigger than STAKING_ESTIMAGE_BLOCK_RANGE
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
-    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
+    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,
+    "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
     "POOL_SUB_SLOT_ITERS": 37600000000,  # iters limit * NUM_SPS
-
-    "STAKING_ESTIMATE_BLOCK_RANGE": 4608 * 3,
 }
 
 
-DEFAULT_CONSTANTS = ConsensusConstants(**default_kwargs)  # type: ignore
+DEFAULT_CONSTANTS = ConsensusConstants(**testnet_kwargs)  # type: ignore

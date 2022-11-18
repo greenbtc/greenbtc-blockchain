@@ -1,58 +1,45 @@
-from __future__ import annotations
-
 import asyncio
 import concurrent
-import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
+from greenbtc.consensus.coinbase import create_puzzlehash_for_pk
 import greenbtc.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from greenbtc.consensus.constants import ConsensusConstants
-from greenbtc.plot_sync.sender import Sender
 from greenbtc.plotting.manager import PlotManager
 from greenbtc.plotting.util import (
-    PlotRefreshEvents,
-    PlotRefreshResult,
-    PlotsRefreshParameter,
     add_plot_directory,
     get_plot_directories,
-    remove_plot,
     remove_plot_directory,
+    remove_plot,
+    PlotsRefreshParameter,
+    PlotRefreshResult,
+    PlotRefreshEvents,
 )
-from greenbtc.rpc.rpc_server import default_get_connections
-from greenbtc.server.outbound_message import NodeType
-from greenbtc.server.server import GreenBTCServer
+from greenbtc.util.streamable import dataclass_from_dict
+from greenbtc.util.bech32m import encode_puzzle_hash
 
 log = logging.getLogger(__name__)
 
 
 class Harvester:
     plot_manager: PlotManager
-    plot_sync_sender: Sender
     root_path: Path
-    _shut_down: bool
+    _is_shutdown: bool
     executor: ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
     cached_challenges: List
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
-    _server: Optional[GreenBTCServer]
-
-    @property
-    def server(self) -> GreenBTCServer:
-        # This is a stop gap until the class usage is refactored such the values of
-        # integral attributes are known at creation of the instance.
-        if self._server is None:
-            raise RuntimeError("server not assigned")
-
-        return self._server
+    config: Dict
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
+        self.config = config
         # TODO, remove checks below later after some versions / time
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter()
         if "plot_loading_frequency_seconds" in config:
@@ -60,21 +47,16 @@ class Harvester:
                 "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
                 "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
             )
-            refresh_parameter = dataclasses.replace(
-                refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
-            )
         if "plots_refresh_parameter" in config:
-            refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
-
-        self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
+            refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
 
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
-        self.plot_sync_sender = Sender(self.plot_manager)
-        self._shut_down = False
+        self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
-        self._server = None
+        self.state_changed_callback = None
+        self.server = None
         self.constants = constants
         self.cached_challenges = []
         self.state_changed_callback: Optional[Callable] = None
@@ -82,56 +64,40 @@ class Harvester:
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_running_loop()
+        self.event_loop = asyncio.get_event_loop()
 
     def _close(self):
-        self._shut_down = True
+        self._is_shutdown = True
         self.executor.shutdown(wait=True)
         self.plot_manager.stop_refreshing()
-        self.plot_manager.reset()
-        self.plot_sync_sender.stop()
 
     async def _await_closed(self):
-        await self.plot_sync_sender.await_closed()
-
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        return default_get_connections(server=self.server, request_node_type=request_node_type)
-
-    async def on_connect(self, connection: ws.WSGreenBTCConnection):
         pass
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Dict[str, Any] = None):
+    def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change, change_data)
+            self.state_changed_callback(change)
 
     def _plot_refresh_callback(self, event: PlotRefreshEvents, update_result: PlotRefreshResult):
-        log_function = self.log.debug if event == PlotRefreshEvents.batch_processed else self.log.info
-        log_function(
-            f"_plot_refresh_callback: event {event.name}, loaded {len(update_result.loaded)}, "
-            f"removed {len(update_result.removed)}, processed {update_result.processed}, "
+        self.log.info(
+            f"refresh_batch: event {event.name}, loaded {update_result.loaded}, "
+            f"removed {update_result.removed}, processed {update_result.processed}, "
             f"remaining {update_result.remaining}, "
-            f"duration: {update_result.duration:.2f} seconds, "
-            f"total plots: {len(self.plot_manager.plots)}"
+            f"duration: {update_result.duration:.2f} seconds"
         )
-        if event == PlotRefreshEvents.started:
-            self.plot_sync_sender.sync_start(update_result.remaining, self.plot_manager.initial_refresh())
-        if event == PlotRefreshEvents.batch_processed:
-            self.plot_sync_sender.process_batch(update_result.loaded, update_result.remaining)
-        if event == PlotRefreshEvents.done:
-            self.plot_sync_sender.sync_done(update_result.removed, update_result.duration)
+        if update_result.loaded > 0:
+            self.event_loop.call_soon_threadsafe(self._state_changed, "plots")
 
-    def on_disconnect(self, connection: ws.WSGreenBTCConnection):
+    def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
-        self.state_changed("close_connection")
-        self.plot_sync_sender.stop()
-        asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
-        self.plot_manager.stop_refreshing()
+        self._state_changed("close_connection")
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
+        address_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
         response_plots: List[Dict] = []
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
@@ -140,13 +106,15 @@ class Harvester:
                     {
                         "filename": str(path),
                         "size": prover.get_size(),
+                        "plot-seed": prover.get_id(),  # Deprecated
                         "plot_id": prover.get_id(),
                         "pool_public_key": plot_info.pool_public_key,
                         "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
                         "plot_public_key": plot_info.plot_public_key,
                         "file_size": plot_info.file_size,
-                        "time_modified": int(plot_info.time_modified),
-                        "farmer_pk_ph": plot_info.farmer_pk_ph,
+                        "time_modified": plot_info.time_modified,
+                        "farmer_public_key": plot_info.farmer_public_key,
+                        "farmer_puzzle_address": encode_puzzle_hash(create_puzzlehash_for_pk(plot_info.farmer_public_key), address_prefix),
                     }
                 )
             self.log.debug(
@@ -163,7 +131,7 @@ class Harvester:
     def delete_plot(self, str_path: str):
         remove_plot(Path(str_path))
         self.plot_manager.trigger_refresh()
-        self.state_changed("plots")
+        self._state_changed("plots")
         return True
 
     async def add_plot_directory(self, str_path: str) -> bool:
@@ -179,5 +147,5 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    def set_server(self, server: GreenBTCServer) -> None:
-        self._server = server
+    def set_server(self, server):
+        self.server = server

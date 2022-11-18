@@ -1,8 +1,8 @@
-from greenbtc.protocols import full_node_protocol, introducer_protocol, wallet_protocol
+from greenbtc.protocols import farmer_protocol, full_node_protocol, introducer_protocol, wallet_protocol
 from greenbtc.server.outbound_message import NodeType
-from greenbtc.server.ws_connection import WSGreenBTCConnection
+from greenbtc.server.ws_connection import WSChiaConnection
 from greenbtc.types.mempool_inclusion_status import MempoolInclusionStatus
-from greenbtc.util.api_decorators import api_request, peer_required, execute_task
+from greenbtc.util.api_decorators import api_request, execute_task, peer_required
 from greenbtc.util.errors import Err
 from greenbtc.wallet.wallet_node import WalletNode
 
@@ -23,10 +23,10 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSGreenBTCConnection):
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
         pass
 
-    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSGreenBTCConnection):
+    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
         """
         The full node has rejected our request for removals.
         """
@@ -42,15 +42,14 @@ class WalletNodeAPI:
     @execute_task
     @peer_required
     @api_request
-    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSGreenBTCConnection):
+    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         """
         The full node sent as a new peak
         """
-        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
-        await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
+        await self.wallet_node.new_peak_wallet(peak, peer)
 
     @api_request
-    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
+    async def reject_block_header(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
@@ -62,7 +61,7 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_additions(self, response: wallet_protocol.RespondAdditions, peer: WSGreenBTCConnection):
+    async def respond_additions(self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection):
         pass
 
     @api_request
@@ -71,65 +70,56 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def transaction_ack(self, ack: wallet_protocol.TransactionAck, peer: WSGreenBTCConnection):
+    async def transaction_ack(self, ack: wallet_protocol.TransactionAck, peer: WSChiaConnection):
         """
         This is an ack for our previous SendTransaction call. This removes the transaction from
         the send queue if we have sent it to enough nodes.
         """
-        async with self.wallet_node.wallet_state_manager.lock:
-            assert peer.peer_node_id is not None
-            name = peer.peer_node_id.hex()
-            status = MempoolInclusionStatus(ack.status)
-            try:
-                wallet_state_manager = self.wallet_node.wallet_state_manager
-            except RuntimeError as e:
-                if "not assigned" in str(e):
-                    return None
-                raise
-
-            if status == MempoolInclusionStatus.SUCCESS:
-                self.wallet_node.log.info(
-                    f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
-                )
-            elif status == MempoolInclusionStatus.PENDING:
-                self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
-            else:
-                if not self.wallet_node.is_trusted(peer) and ack.error == Err.NO_TRANSACTIONS_WHILE_SYNCING.name:
-                    self.wallet_node.log.info(f"Peer {peer.get_peer_info()} is not synced, closing connection")
-                    await peer.close()
-                    return
-                self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
-            if ack.error is not None:
-                await wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
-            else:
-                await wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
+        assert peer.peer_node_id is not None
+        name = peer.peer_node_id.hex()
+        status = MempoolInclusionStatus(ack.status)
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+            return None
+        if status == MempoolInclusionStatus.SUCCESS:
+            self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
+        elif status == MempoolInclusionStatus.PENDING:
+            self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
+        else:
+            self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
+        if ack.error is not None:
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
+        else:
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
 
     @peer_required
     @api_request
     async def respond_peers_introducer(
-        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSGreenBTCConnection
+        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
-        if self.wallet_node.wallet_peers is not None:
+        if not self.wallet_node.has_full_node():
             await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
+        else:
+            await self.wallet_node.wallet_peers.ensure_is_closed()
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
 
     @peer_required
     @api_request
-    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSGreenBTCConnection):
-        if self.wallet_node.wallet_peers is None:
-            return None
-
-        self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-        await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
-
+    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection):
+        if not self.wallet_node.has_full_node():
+            self.log.info(f"Wallet received {len(request.peer_list)} peers.")
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+        else:
+            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
+            await self.wallet_node.wallet_peers.ensure_is_closed()
         return None
 
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
-        self.log.error("Unexpected message `respond_puzzle_solution`. Peer might be slow to respond")
-        return None
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+            return None
+        await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
     @api_request
     async def reject_puzzle_solution(self, request: wallet_protocol.RejectPuzzleSolution):
@@ -140,39 +130,9 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def respond_block_headers(self, request: wallet_protocol.RespondBlockHeaders):
-        pass
-
-    @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 
     @api_request
-    async def reject_block_headers(self, request: wallet_protocol.RejectBlockHeaders):
-        pass
-
-    @execute_task
-    @peer_required
-    @api_request
-    async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSGreenBTCConnection):
-        await self.wallet_node.new_peak_queue.full_node_state_updated(request, peer)
-
-    @api_request
-    async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
-        pass
-
-    @api_request
-    async def respond_to_coin_update(self, request: wallet_protocol.RespondToCoinUpdates):
-        pass
-
-    @api_request
-    async def respond_children(self, request: wallet_protocol.RespondChildren):
-        pass
-
-    @api_request
-    async def respond_ses_hashes(self, request: wallet_protocol.RespondSESInfo):
-        pass
-
-    @api_request
-    async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
-        pass
+    async def respond_stakings(self, response: farmer_protocol.FarmerStakings):
+        self.farmer.log.warning("Respond stakings came too late")

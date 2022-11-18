@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
-from greenbtc.server.ws_connection import WSGreenBTCConnection
+from greenbtc.server.ws_connection import WSChiaConnection
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.spend_bundle import SpendBundle
 
@@ -17,7 +15,7 @@ class TransactionQueueEntry:
     transaction: SpendBundle
     transaction_bytes: Optional[bytes]
     spend_name: bytes32
-    peer: Optional[WSGreenBTCConnection]
+    peer: Optional[WSChiaConnection]
     test: bool
 
     def __lt__(self, other):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -8,8 +6,8 @@ from greenbtc.util.ints import uint8, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SubEpochSummary(Streamable):
     prev_subepoch_summary_hash: bytes32
     reward_chain_hash: bytes32  # hash of reward chain at end of last segment

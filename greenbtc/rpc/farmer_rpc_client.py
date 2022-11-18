@@ -1,18 +1,14 @@
-from __future__ import annotations
+from typing import Dict, List, Optional, Any
 
-from typing import Any, Dict, List, Optional
-
-from greenbtc.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from greenbtc.rpc.rpc_client import RpcClient
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
-from greenbtc.util.misc import dataclass_to_json_dict
 
 
 class FarmerRpcClient(RpcClient):
     """
-    Client to GreenBTC RPC, connects to a local farmer. Uses HTTP/JSON, and converts back from
+    Client to Silicoin RPC, connects to a local farmer. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run GreenBTC's
+    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
     protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
@@ -26,11 +22,8 @@ class FarmerRpcClient(RpcClient):
     async def get_signage_points(self) -> List[Dict]:
         return (await self.fetch("get_signage_points", {}))["signage_points"]
 
-    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict:
-        response = await self.fetch(
-            "get_reward_targets",
-            {"search_for_private_key": search_for_private_key, "max_ph_to_search": max_ph_to_search},
-        )
+    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+        response = await self.fetch("get_reward_targets", {"search_for_private_key": search_for_private_key})
         return_dict = {
             "farmer_target": response["farmer_target"],
             "pool_target": response["pool_target"],
@@ -58,21 +51,6 @@ class FarmerRpcClient(RpcClient):
 
     async def get_harvesters(self) -> Dict[str, Any]:
         return await self.fetch("get_harvesters", {})
-
-    async def get_harvesters_summary(self) -> Dict[str, object]:
-        return await self.fetch("get_harvesters_summary", {})
-
-    async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> Dict[str, Any]:
-        return await self.fetch("get_harvester_plots_valid", dataclass_to_json_dict(request))
-
-    async def get_harvester_plots_invalid(self, request: PlotPathRequestData) -> Dict[str, Any]:
-        return await self.fetch("get_harvester_plots_invalid", dataclass_to_json_dict(request))
-
-    async def get_harvester_plots_keys_missing(self, request: PlotPathRequestData) -> Dict[str, Any]:
-        return await self.fetch("get_harvester_plots_keys_missing", dataclass_to_json_dict(request))
-
-    async def get_harvester_plots_duplicates(self, request: PlotPathRequestData) -> Dict[str, Any]:
-        return await self.fetch("get_harvester_plots_duplicates", dataclass_to_json_dict(request))
 
     async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
         try:

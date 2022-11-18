@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
@@ -6,6 +6,7 @@ from clvm_tools.binutils import disassemble as bu_disassemble
 
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.program import Program, INFINITE_COST
+from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.consensus.default_constants import DEFAULT_CONSTANTS
 from greenbtc.types.condition_opcodes import ConditionOpcode
 from greenbtc.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -20,7 +21,7 @@ KFA = {v: k for k, v in CONDITIONS.items()}
 # we may need also to save the `genesis_coin_mod` or its hash
 
 
-def disassemble(sexp: Program):
+def disassemble(sexp):
     """
     This version of `disassemble` also disassembles condition opcodes like `ASSERT_ANNOUNCEMENT_CONSUMED`.
     """
@@ -75,8 +76,8 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
-            for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
-                pks.append(G1Element.from_bytes(pk_bytes))
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
+                pks.append(G1Element.from_bytes(pk))
                 msgs.append(m)
             print()
             cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
@@ -188,3 +189,10 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print(f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}")
     print(f"  add_data: {[msg.hex()[-64:] for msg in msgs]}")
     print(f"signature: {spend_bundle.aggregated_signature}")
+
+
+def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
+    output_conditions = [
+        [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
+    ]
+    return Program.to(output_conditions)

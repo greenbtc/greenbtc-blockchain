@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -13,8 +11,8 @@ from greenbtc.util.ints import uint8, uint32, uint64, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SubEpochData(Streamable):
     reward_chain_hash: bytes32
     num_blocks_overflow: uint8
@@ -33,8 +31,8 @@ class SubEpochData(Streamable):
 # total number of challenge blocks == total number of reward chain blocks
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SubSlotData(Streamable):
     # if infused
     proof_of_space: Optional[ProofOfSpace]
@@ -67,37 +65,37 @@ class SubSlotData(Streamable):
         return False
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SubEpochChallengeSegment(Streamable):
     sub_epoch_n: uint32
     sub_slots: List[SubSlotData]
     rc_slot_end_info: Optional[VDFInfo]  # in first segment of each sub_epoch
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 # this is used only for serialization to database
 class SubEpochSegments(Streamable):
     challenge_segments: List[SubEpochChallengeSegment]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 # this is used only for serialization to database
 class RecentChainData(Streamable):
     recent_chain_data: List[HeaderBlock]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
     reward_chain_block: RewardChainBlock
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch

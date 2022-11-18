@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class BackupInitialized(Streamable):
     """
     Stores user decision regarding import of backup info

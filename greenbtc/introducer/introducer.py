@@ -1,31 +1,19 @@
 import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Optional
 
-from greenbtc.rpc.rpc_server import default_get_connections
-from greenbtc.server.outbound_message import NodeType
-from greenbtc.server.server import GreenBTCServer
+from greenbtc.server.server import ChiaServer
 from greenbtc.server.introducer_peers import VettedPeer
-from greenbtc.server.ws_connection import WSGreenBTCConnection
 from greenbtc.util.ints import uint64
 
 
 class Introducer:
-    @property
-    def server(self) -> GreenBTCServer:
-        # This is a stop gap until the class usage is refactored such the values of
-        # integral attributes are known at creation of the instance.
-        if self._server is None:
-            raise RuntimeError("server not assigned")
-
-        return self._server
-
     def __init__(self, max_peers_to_send: int, recent_peer_threshold: int):
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
         self._shut_down = False
-        self._server: Optional[GreenBTCServer] = None
+        self.server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
 
     async def _start(self):
@@ -39,18 +27,8 @@ class Introducer:
         pass
         # await self._vetting_task
 
-    async def on_connect(self, peer: WSGreenBTCConnection) -> None:
-        pass
-
-    def _set_state_changed_callback(self, callback: Callable):
-        # TODO: fill this out?
-        pass
-
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        return default_get_connections(server=self.server, request_node_type=request_node_type)
-
-    def set_server(self, server: GreenBTCServer):
-        self._server = server
+    def set_server(self, server: ChiaServer):
+        self.server = server
 
     async def _vetting_loop(self):
         while True:
@@ -62,7 +40,7 @@ class Introducer:
                         return None
                     await asyncio.sleep(1)
                 self.log.info("Vetting random peers.")
-                if self._server.introducer_peers is None:
+                if self.server.introducer_peers is None:
                     continue
                 raw_peers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
 

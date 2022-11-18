@@ -1,18 +1,16 @@
-from __future__ import annotations
-
 import asyncio
 import random
 from typing import Any, List, Optional, Tuple
 
-from greenbtc.server.ws_connection import WSGreenBTCConnection
+from greenbtc.server.ws_connection import WSChiaConnection
 
 
 async def send_all_first_reply(
-    func: str, arg: Any, peers: List[WSGreenBTCConnection], timeout=15
-) -> Optional[Tuple[Any, WSGreenBTCConnection]]:
+    func: str, arg: Any, peers: List[WSChiaConnection], timeout=15
+) -> Optional[Tuple[Any, WSChiaConnection]]:
     """performs an API request to peers and returns the result of the first response and the peer that sent it."""
 
-    async def do_func(peer_x: WSGreenBTCConnection, func_x: str, arg_x: Any):
+    async def do_func(peer_x: WSChiaConnection, func_x: str, arg_x: Any):
         method_to_call = getattr(peer_x, func_x)
         result_x = await method_to_call(arg_x)
         if result_x is not None:
@@ -39,10 +37,10 @@ async def send_all_first_reply(
         return None
 
 
-async def send_to_random(func: str, arg: Any, peers: List[WSGreenBTCConnection]) -> Optional[Tuple[Any, WSGreenBTCConnection]]:
+async def send_to_random(func: str, arg: Any, peers: List[WSChiaConnection]) -> Optional[Tuple[Any, WSChiaConnection]]:
     """performs an API request to peers and returns the result of the first response and the peer that sent it."""
 
-    async def do_func(peer_x: WSGreenBTCConnection, func_x: str, arg_x: Any):
+    async def do_func(peer_x: WSChiaConnection, func_x: str, arg_x: Any):
         method_to_call = getattr(peer_x, func_x)
         result_x = await method_to_call(arg_x)
         if result_x is not None:

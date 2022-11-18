@@ -1,7 +1,8 @@
-from __future__ import annotations
-
 import logging
+from decimal import Decimal
 from typing import Dict, List, Optional
+
+from blspy import G1Element
 
 from greenbtc.consensus.block_record import BlockRecord
 from greenbtc.consensus.blockchain_interface import BlockchainInterface
@@ -19,6 +20,7 @@ class BlockCache(BlockchainInterface):
         headers: Dict[bytes32, HeaderBlock] = None,
         height_to_hash: Dict[uint32, bytes32] = None,
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
+        inner: BlockchainInterface = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -30,18 +32,15 @@ class BlockCache(BlockchainInterface):
         self._headers = headers
         self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
-        self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
+        self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
+        self._inner = inner
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
 
     def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
-        # Precondition: height is < peak height
-
-        header_hash: Optional[bytes32] = self.height_to_hash(height)
-        assert header_hash is not None
-
+        header_hash = self.height_to_hash(height)
         return self.block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
@@ -86,15 +85,20 @@ class BlockCache(BlockchainInterface):
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
-        self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
+        self._sub_epoch_segments[sub_epoch_summary_height] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_hash: bytes32,
+        sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments = self._sub_epoch_segments.get(sub_epoch_summary_hash)
+        segments = self._sub_epoch_segments.get(sub_epoch_summary_height)
         if segments is None:
             return None
         return segments.challenge_segments
+
+    async def get_farmer_difficulty_coefficient(
+        self, farmer_public_key: G1Element, height: Optional[uint32] = None
+    ) -> Decimal:
+        return await self._inner.get_farmer_difficulty_coefficient(farmer_public_key, height)

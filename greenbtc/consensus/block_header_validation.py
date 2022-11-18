@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import dataclasses
 import logging
 import time
@@ -47,7 +45,8 @@ def validate_unfinished_header_block(
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
-    check_sub_epoch_summary: bool = True,
+    check_sub_epoch_summary=True,
+    height: Optional[uint32] = None,
 ) -> Tuple[Optional[uint64], Optional[Decimal], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -510,21 +509,20 @@ def validate_unfinished_header_block(
             peak_height = height - 1
         else:
             peak_height = 0
-    difficulty_coefficient = blocks.get_farmer_difficulty_coeff_sync(
-        header_block.reward_chain_block.proof_of_space.farmer_pk_ph, peak_height
+    difficulty_coefficient = blocks.get_farmer_difficulty_coefficient_sync(
+        header_block.reward_chain_block.proof_of_space.farmer_public_key, peak_height
     )
     required_iters: uint64 = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
         expected_difficulty,
-        cc_sp_hash,
         difficulty_coefficient,
+        cc_sp_hash,
     )
 
     # 7. check required iters
-    csp_interval_iters = calculate_sp_interval_iters(constants, expected_sub_slot_iters)
-    if required_iters >= csp_interval_iters:
+    if required_iters >= calculate_sp_interval_iters(constants, expected_sub_slot_iters):
         return None, None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
@@ -853,7 +851,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
-    check_sub_epoch_summary: bool = True,
+    check_sub_epoch_summary=True,
 ) -> Tuple[Optional[uint64], Optional[Decimal], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -878,6 +876,7 @@ def validate_finished_header_block(
         expected_sub_slot_iters,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
+        height=header_block.height,
     )
 
     genesis_block = False

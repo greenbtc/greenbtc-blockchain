@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 from greenbtc.types.blockchain_format.program import SerializedProgram
 
-from .load_clvm import load_serialized_clvm_maybe_recompile
+from .load_clvm import load_clvm
 
-MOD = load_serialized_clvm_maybe_recompile("rom_bootstrap_generator.clvm")
+MOD = SerializedProgram.from_bytes(load_clvm("rom_bootstrap_generator.clvm").as_bin())
 
 
-def get_generator() -> SerializedProgram:
+def get_generator():
     return MOD

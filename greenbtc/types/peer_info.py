@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ipaddress
 from dataclasses import dataclass
 from typing import Optional, Union
@@ -8,8 +6,8 @@ from greenbtc.util.ints import uint16, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PeerInfo(Streamable):
     host: str
     port: uint16
@@ -61,8 +59,8 @@ class PeerInfo(Streamable):
         return group
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class TimestampedPeerInfo(Streamable):
     host: str
     port: uint16

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from greenbtc.types.blockchain_format.coin import Coin

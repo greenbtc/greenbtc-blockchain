@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from typing import Callable, Optional
 
 from greenbtc.introducer.introducer import Introducer
 from greenbtc.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from greenbtc.protocols.protocol_message_types import ProtocolMessageTypes
 from greenbtc.server.outbound_message import Message, make_msg
-from greenbtc.server.ws_connection import WSGreenBTCConnection
+from greenbtc.server.ws_connection import WSChiaConnection
 from greenbtc.types.peer_info import TimestampedPeerInfo
 from greenbtc.util.api_decorators import api_request, peer_required
 from greenbtc.util.ints import uint64
@@ -26,7 +24,7 @@ class IntroducerAPI:
     async def request_peers_introducer(
         self,
         request: RequestPeersIntroducer,
-        peer: WSGreenBTCConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         max_peers = self.introducer.max_peers_to_send
         if self.introducer.server is None or self.introducer.server.introducer_peers is None:

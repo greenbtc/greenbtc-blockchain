@@ -1,8 +1,5 @@
-from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
-
-from typing_extensions import SupportsIndex
-
-_T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
+import io
+from typing import Any, BinaryIO
 
 
 def hexstr_to_bytes(input_str: str) -> bytes:
@@ -14,44 +11,55 @@ def hexstr_to_bytes(input_str: str) -> bytes:
     return bytes.fromhex(input_str)
 
 
-class SizedBytes(bytes):
-    """A streamable type that subclasses "bytes" but requires instances
-    to be a certain, fixed size specified by the `._size` class attribute.
+def make_sized_bytes(size: int):
     """
+    Create a streamable type that subclasses "bytes" but requires instances
+    to be a certain, fixed size.
+    """
+    name = "bytes%d" % size
 
-    _size = 0
+    def __new__(cls, v):
+        v = bytes(v)
+        if not isinstance(v, bytes) or len(v) != size:
+            raise ValueError("bad %s initializer %s" % (name, v))
+        return bytes.__new__(cls, v)  # type: ignore
 
-    # This is just a partial exposure of the underlying int constructor.  Liskov...
-    # https://github.com/python/typeshed/blob/f8547a3f3131de90aa47005358eb3394e79cfa13/stdlib/builtins.pyi#L483-L493
-    def __init__(self, v: Union[Iterable[SupportsIndex], SupportsBytes]) -> None:
-        # v is unused here and that is ok since .__new__() seems to have already
-        # processed the parameter when creating the instance of the class.  We have no
-        # additional special action to take here beyond verifying that the newly
-        # created instance satisfies the length limitation of the particular subclass.
-        super().__init__()
-        if len(self) != self._size:
-            raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
-
-    @classmethod
-    def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
-        b = f.read(cls._size)
+    @classmethod  # type: ignore
+    def parse(cls, f: BinaryIO) -> Any:
+        b = f.read(size)
+        assert len(b) == size
         return cls(b)
 
-    def stream(self, f: BinaryIO) -> None:
+    def stream(self, f):
         f.write(self)
 
-    @classmethod
-    def from_bytes(cls: Type[_T_SizedBytes], blob: bytes) -> _T_SizedBytes:
-        return cls(blob)
+    @classmethod  # type: ignore
+    def from_bytes(cls: Any, blob: bytes) -> Any:
+        # pylint: disable=no-member
+        f = io.BytesIO(blob)
+        result = cls.parse(f)
+        assert f.read() == b""
+        return result
 
-    @classmethod
-    def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
-        if input_str.startswith("0x") or input_str.startswith("0X"):
-            return cls.fromhex(input_str[2:])
-        return cls.fromhex(input_str)
+    def __bytes__(self: Any) -> bytes:
+        f = io.BytesIO()
+        self.stream(f)
+        return bytes(f.getvalue())
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.hex()
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
+
+    namespace = dict(
+        __new__=__new__,
+        parse=parse,
+        stream=stream,
+        from_bytes=from_bytes,
+        __bytes__=__bytes__,
+        __str__=__str__,
+        __repr__=__repr__,
+    )
+
+    return type(name, (bytes,), namespace)

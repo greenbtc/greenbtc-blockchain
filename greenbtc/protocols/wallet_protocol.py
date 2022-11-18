@@ -1,17 +1,12 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from chia_rs import CoinState, RespondToPhUpdates
-
-from greenbtc.full_node.fee_estimate import FeeEstimateGroup
 from greenbtc.types.blockchain_format.coin import Coin
-from greenbtc.types.blockchain_format.program import SerializedProgram
+from greenbtc.types.blockchain_format.program import Program
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.header_block import HeaderBlock
 from greenbtc.types.spend_bundle import SpendBundle
-from greenbtc.util.ints import uint8, uint32, uint64, uint128
+from greenbtc.util.ints import uint8, uint32, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 """
@@ -20,54 +15,51 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-__all__ = ["CoinState", "RespondToPhUpdates"]
-
-
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestPuzzleSolution(Streamable):
     coin_name: bytes32
     height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class PuzzleSolutionResponse(Streamable):
     coin_name: bytes32
     height: uint32
-    puzzle: SerializedProgram
-    solution: SerializedProgram
+    puzzle: Program
+    solution: Program
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondPuzzleSolution(Streamable):
     response: PuzzleSolutionResponse
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RejectPuzzleSolution(Streamable):
     coin_name: bytes32
     height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class SendTransaction(Streamable):
     transaction: SpendBundle
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class TransactionAck(Streamable):
     txid: bytes32
     status: uint8  # MempoolInclusionStatus
     error: Optional[str]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class NewPeakWallet(Streamable):
     header_hash: bytes32
     height: uint32
@@ -75,34 +67,35 @@ class NewPeakWallet(Streamable):
     fork_point_with_previous_peak: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestBlockHeader(Streamable):
     height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondBlockHeader(Streamable):
     header_block: HeaderBlock
+    difficulty_coefficient: str
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RejectHeaderRequest(Streamable):
     height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestRemovals(Streamable):
     height: uint32
     header_hash: bytes32
     coin_names: Optional[List[bytes32]]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondRemovals(Streamable):
     height: uint32
     header_hash: bytes32
@@ -110,23 +103,23 @@ class RespondRemovals(Streamable):
     proofs: Optional[List[Tuple[bytes32, bytes]]]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RejectRemovalsRequest(Streamable):
     height: uint32
     header_hash: bytes32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestAdditions(Streamable):
     height: uint32
     header_hash: Optional[bytes32]
     puzzle_hashes: Optional[List[bytes32]]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondAdditions(Streamable):
     height: uint32
     header_hash: bytes32
@@ -134,100 +127,75 @@ class RespondAdditions(Streamable):
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RejectAdditionsRequest(Streamable):
     height: uint32
     header_hash: bytes32
 
 
-@streamable
 @dataclass(frozen=True)
-class RespondBlockHeaders(Streamable):
-    start_height: uint32
-    end_height: uint32
-    header_blocks: List[HeaderBlock]
-
-
 @streamable
-@dataclass(frozen=True)
-class RejectBlockHeaders(Streamable):
-    start_height: uint32
-    end_height: uint32
-
-
-@streamable
-@dataclass(frozen=True)
-class RequestBlockHeaders(Streamable):
-    start_height: uint32
-    end_height: uint32
-    return_filter: bool
-
-
-@streamable
-@dataclass(frozen=True)
 class RequestHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RejectHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     header_blocks: List[HeaderBlock]
 
 
-# This class is implemented in Rust
-# @streamable
-# @dataclass(frozen=True)
-# class CoinState(Streamable):
-#    coin: Coin
-#    spent_height: Optional[uint32]
-#    created_height: Optional[uint32]
-
-
-@streamable
 @dataclass(frozen=True)
+@streamable
+class CoinState(Streamable):
+    coin: Coin
+    spent_height: Optional[uint32]
+    created_height: Optional[uint32]
+
+
+@dataclass(frozen=True)
+@streamable
 class RegisterForPhUpdates(Streamable):
     puzzle_hashes: List[bytes32]
     min_height: uint32
 
 
-# This class is implemented in Rust
-# @streamable
-# @dataclass(frozen=True)
-# class RespondToPhUpdates(Streamable):
-#    puzzle_hashes: List[bytes32]
-#    min_height: uint32
-#    coin_states: List[CoinState]
-
-
-@streamable
 @dataclass(frozen=True)
+@streamable
+class RespondToPhUpdates(Streamable):
+    puzzle_hashes: List[bytes32]
+    min_height: uint32
+    coin_states: List[CoinState]
+
+
+@dataclass(frozen=True)
+@streamable
 class RegisterForCoinUpdates(Streamable):
     coin_ids: List[bytes32]
     min_height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondToCoinUpdates(Streamable):
     coin_ids: List[bytes32]
     min_height: uint32
     coin_states: List[CoinState]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class CoinStateUpdate(Streamable):
     height: uint32
     fork_height: uint32
@@ -235,43 +203,27 @@ class CoinStateUpdate(Streamable):
     items: List[CoinState]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestChildren(Streamable):
     coin_name: bytes32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondChildren(Streamable):
     coin_states: List[CoinState]
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RequestSESInfo(Streamable):
     start_height: uint32
     end_height: uint32
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class RespondSESInfo(Streamable):
     reward_chain_hash: List[bytes32]
     heights: List[List[uint32]]
-
-
-@streamable
-@dataclass(frozen=True)
-class RequestFeeEstimates(Streamable):
-    """
-    time_targets (List[uint64]): Epoch timestamps in seconds to estimate FeeRates for.
-    """
-
-    time_targets: List[uint64]
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondFeeEstimates(Streamable):
-    estimates: FeeEstimateGroup

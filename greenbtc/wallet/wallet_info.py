@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List
 
@@ -7,8 +5,8 @@ from greenbtc.util.ints import uint8, uint32
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class WalletInfo(Streamable):
     """
     This object represents the wallet data as it is stored in DB.
@@ -26,8 +24,8 @@ class WalletInfo(Streamable):
     data: str
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class WalletInfoBackup(Streamable):
     """
     Used for transforming list of WalletInfo objects into bytes.

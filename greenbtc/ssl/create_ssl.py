@@ -24,7 +24,7 @@ def get_mozilla_ca_crt() -> str:
     return str(mozilla_path)
 
 
-def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True):
+def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes):
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
     for path, data, mode in [
@@ -32,9 +32,6 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
         (key_path, key_data, DEFAULT_PERMISSIONS_KEY_FILE),
     ]:
         if path.exists():
-            if not overwrite:
-                continue
-
             path.unlink()
 
         with open(os.open(str(path), flags, mode), "wb") as f:
@@ -56,8 +53,8 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     cert_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     new_subject = x509.Name(
         [
-            x509.NameAttribute(NameOID.COMMON_NAME, "GreenBTC"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "GreenBTC"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Chia"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
         ]
     )
@@ -91,8 +88,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     subject = issuer = x509.Name(
         [
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "GreenBTC"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "GreenBTC CA"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Chia"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Chia CA"),
             x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Organic Farming Division"),
         ]
     )

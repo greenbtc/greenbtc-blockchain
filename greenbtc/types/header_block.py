@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -10,8 +8,8 @@ from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class HeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator (but with filter), used by light clients
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb

@@ -1,63 +1,79 @@
-from __future__ import annotations
+from typing import Any, BinaryIO
 
-from greenbtc.util.struct_stream import StructStream, parse_metadata_from_name
+from greenbtc.util.struct_stream import StructStream
 
 
-@parse_metadata_from_name
 class int8(StructStream):
-    pass
+    PACK = "!b"
 
 
-@parse_metadata_from_name
 class uint8(StructStream):
-    pass
+    PACK = "!B"
 
 
-@parse_metadata_from_name
 class int16(StructStream):
-    pass
+    PACK = "!h"
 
 
-@parse_metadata_from_name
 class uint16(StructStream):
-    pass
+    PACK = "!H"
 
 
-@parse_metadata_from_name
 class int32(StructStream):
-    pass
+    PACK = "!l"
 
 
-@parse_metadata_from_name
 class uint32(StructStream):
-    pass
+    PACK = "!L"
 
 
-@parse_metadata_from_name
 class int64(StructStream):
-    pass
+    PACK = "!q"
 
 
-@parse_metadata_from_name
 class uint64(StructStream):
-    pass
+    PACK = "!Q"
 
 
-@parse_metadata_from_name
-class uint128(StructStream):
-    pass
+class uint128(int):
+    def __new__(cls: Any, value: int):
+        value = int(value)
+        if value > (2 ** 128) - 1 or value < 0:
+            raise ValueError(f"Value {value} of does not fit into uint128")
+        return int.__new__(cls, value)  # type: ignore
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> Any:
+        read_bytes = f.read(16)
+        assert len(read_bytes) == 16
+        n = int.from_bytes(read_bytes, "big", signed=False)
+        assert n <= (2 ** 128) - 1 and n >= 0
+        return cls(n)
+
+    def stream(self, f):
+        assert self <= (2 ** 128) - 1 and self >= 0
+        f.write(self.to_bytes(16, "big", signed=False))
 
 
-class int512(StructStream):
-    PACK = None
+class int512(int):
+    def __new__(cls: Any, value: int):
+        value = int(value)
+        # note that the boundaries for int512 is not what you might expect. We
+        # encode these with one extra byte, but only allow a range of
+        # [-INT512_MAX, INT512_MAX]
+        if value >= (2 ** 512) or value <= -(2 ** 512):
+            raise ValueError(f"Value {value} of does not fit into in512")
+        return int.__new__(cls, value)  # type: ignore
 
     # Uses 65 bytes to fit in the sign bit
-    SIZE = 65
-    BITS = 512
-    SIGNED = True
+    @classmethod
+    def parse(cls, f: BinaryIO) -> Any:
+        read_bytes = f.read(65)
+        assert len(read_bytes) == 65
+        n = int.from_bytes(read_bytes, "big", signed=True)
+        assert n < (2 ** 512) and n > -(2 ** 512)
+        return cls(n)
 
-    # note that the boundaries for int512 is not what you might expect. We
-    # encode these with one extra byte, but only allow a range of
-    # [-INT512_MAX, INT512_MAX]
-    MAXIMUM_EXCLUSIVE = 2**BITS
-    MINIMUM = -(2**BITS) + 1
+    def stream(self, f):
+        assert self < (2 ** 512) and self > -(2 ** 512)
+        f.write(self.to_bytes(65, "big", signed=True))

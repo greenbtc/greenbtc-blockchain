@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from decimal import Decimal
 from typing import List, Optional, Tuple, Union
@@ -52,8 +50,7 @@ class LastState:
 
     def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
         if isinstance(state, timelord_protocol.NewPeakTimelord):
-            log.debug(f"[debug] set state NewPeak {state.reward_chain_block.height} "
-                     f"{state.difficulty} {state.difficulty_coefficient}")
+            log.info(f"set state NewPeak {state.reward_chain_block.height} {state.difficulty} {state.difficulty_coefficient}")
             self.state_type = StateType.PEAK
             self.peak = state
             self.subslot_end = None
@@ -82,6 +79,7 @@ class LastState:
             else:
                 self.passed_ses_height_but_not_yet_included = state.passes_ses_height_but_not_yet_included
         elif isinstance(state, EndOfSubSlotBundle):
+            log.info("set state EndOfSubSlotBundle")
             self.state_type = StateType.END_OF_SUB_SLOT
             if self.peak is not None:
                 self.total_iters = uint128(self.total_iters - self.get_last_ip() + self.sub_slot_iters)
@@ -103,17 +101,14 @@ class LastState:
                 self.passed_ses_height_but_not_yet_included = False
             else:
                 self.infused_ses = False
-                # Since we have a new sub slot which is not an end of subepoch,
-                # we will use the last value that we saw for
-                # passed_ses_height_but_not_yet_included
+                self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
             self.last_challenge_sb_or_eos_total_iters = self.total_iters
         else:
-            assert False
+            self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
+            self.new_epoch = False
 
-        reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
-        assert reward_challenge is not None  # Reward chain always has VDFs
-        self.reward_challenge_cache.append((reward_challenge, self.total_iters))
-        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
+        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
+        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

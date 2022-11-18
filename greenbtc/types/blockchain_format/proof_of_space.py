@@ -1,13 +1,16 @@
+import copy
 import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import Verifier
 
+from greenbtc.consensus.coinbase import create_puzzlehash_for_pk
 from greenbtc.consensus.constants import ConsensusConstants
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
+from greenbtc.util.bech32m import encode_puzzle_hash
 from greenbtc.util.hash import std_hash
 from greenbtc.util.ints import uint8
 from greenbtc.util.streamable import Streamable, streamable
@@ -15,21 +18,39 @@ from greenbtc.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class ProofOfSpace(Streamable):
     challenge: bytes32
     pool_public_key: Optional[G1Element]  # Only one of these two should be present
     pool_contract_puzzle_hash: Optional[bytes32]
-    plot_public_key: G1Element
+    local_public_key: G1Element
     size: uint8
     proof: bytes
-    farmer_pk_ph: bytes32
+    farmer_public_key: G1Element
+
+    @property
+    def plot_public_key(self):
+        return ProofOfSpace.generate_plot_public_key(
+            self.local_public_key, self.farmer_public_key, self.pool_contract_puzzle_hash is not None
+        )
+
+    def to_legacy(self):
+        if self.farmer_public_key is not None:
+            return ProofOfSpace(
+                self.challenge,
+                self.pool_public_key,
+                self.pool_contract_puzzle_hash,
+                self.plot_public_key,
+                self.size,
+                self.proof,
+            )
+        else:
+            return copy.copy(self)
 
     def get_plot_id(self) -> bytes32:
         assert self.pool_public_key is None or self.pool_contract_puzzle_hash is None
         if self.pool_public_key is None:
-            assert self.pool_contract_puzzle_hash is not None
             return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)
         return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
@@ -70,6 +91,9 @@ class ProofOfSpace(Streamable):
         if not quality_str:
             return None
         return bytes32(quality_str)
+
+    def get_farmer_ph(self):
+        return encode_puzzle_hash(create_puzzlehash_for_pk(self.farmer_public_key))
 
     @staticmethod
     def passes_plot_filter(

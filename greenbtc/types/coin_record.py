@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
 
@@ -10,8 +8,8 @@ from greenbtc.util.ints import uint32, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class CoinRecord(Streamable):
     """
     These are values that correspond to a CoinName that are used
@@ -21,12 +19,9 @@ class CoinRecord(Streamable):
     coin: Coin
     confirmed_block_index: uint32
     spent_block_index: uint32
+    spent: bool
     coinbase: bool
     timestamp: uint64  # Timestamp of the block at height confirmed_block_index
-
-    @property
-    def spent(self) -> bool:
-        return self.spent_block_index > 0
 
     @property
     def name(self) -> bytes32:

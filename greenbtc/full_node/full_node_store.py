@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import dataclasses
 import logging
@@ -31,8 +29,8 @@ from greenbtc.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@streamable
 @dataclasses.dataclass(frozen=True)
+@streamable
 class FullNodeStorePeakResult(Streamable):
     added_eos: Optional[EndOfSubSlotBundle]
     new_signage_points: List[Tuple[uint8, SignagePoint]]
@@ -47,7 +45,7 @@ class FullNodeStore:
     candidate_backup_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
 
     # Header hashes of unfinished blocks that we have seen recently
-    seen_unfinished_blocks: Set[bytes32]
+    seen_unfinished_blocks: set
 
     # Unfinished blocks, keyed from reward hash
     unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock, PreValidationResult]]
@@ -74,8 +72,8 @@ class FullNodeStore:
     future_cache_key_times: Dict[bytes32, int]
 
     # These recent caches are for pooling support
-    recent_signage_points: LRUCache[bytes32, Tuple[SignagePoint, float]]
-    recent_eos: LRUCache[bytes32, Tuple[EndOfSubSlotBundle, float]]
+    recent_signage_points: LRUCache
+    recent_eos: LRUCache
 
     # Partial hashes of unfinished blocks we are requesting
     requesting_unfinished_blocks: Set[bytes32]
@@ -83,7 +81,7 @@ class FullNodeStore:
     previous_generator: Optional[CompressorArg]
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
-    tx_fetch_tasks: Dict[bytes32, asyncio.Task[None]]  # Task id: task
+    tx_fetch_tasks: Dict[bytes32, asyncio.Task]  # Task id: task
     serialized_wp_message: Optional[Message]
     serialized_wp_message_tip: Optional[bytes32]
 
@@ -112,7 +110,7 @@ class FullNodeStore:
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
-    ) -> None:
+    ):
         if backup:
             self.candidate_backup_blocks[quality_string] = (height, unfinished_block)
         else:
@@ -183,11 +181,11 @@ class FullNodeStore:
         for del_key in del_keys:
             del self.unfinished_blocks[del_key]
 
-    def remove_unfinished_block(self, partial_reward_hash: bytes32) -> None:
+    def remove_unfinished_block(self, partial_reward_hash: bytes32):
         if partial_reward_hash in self.unfinished_blocks:
             del self.unfinished_blocks[partial_reward_hash]
 
-    def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF) -> None:
+    def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF):
         ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
         if ch not in self.future_ip_cache:
             self.future_ip_cache[ch] = []
@@ -204,7 +202,7 @@ class FullNodeStore:
                 return True
         return False
 
-    def add_to_future_sp(self, signage_point: SignagePoint, index: uint8) -> None:
+    def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
         # We are missing a block here
         if (
             signage_point.cc_vdf is None
@@ -237,7 +235,7 @@ class FullNodeStore:
             self.future_eos_cache.pop(k, [])
             self.future_sp_cache.pop(k, [])
 
-    def clear_slots(self) -> None:
+    def clear_slots(self):
         self.finished_sub_slots.clear()
 
     def get_sub_slot(self, challenge_hash: bytes32) -> Optional[Tuple[EndOfSubSlotBundle, int, uint128]]:
@@ -247,7 +245,7 @@ class FullNodeStore:
                 return sub_slot, index, total_iters
         return None
 
-    def initialize_genesis_sub_slot(self) -> None:
+    def initialize_genesis_sub_slot(self):
         self.clear_slots()
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 
@@ -468,7 +466,7 @@ class FullNodeStore:
         peak: Optional[BlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
-        skip_vdf_validation: bool = False,
+        skip_vdf_validation=False,
     ) -> bool:
         """
         Returns true if sp successfully added

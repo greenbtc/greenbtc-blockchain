@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Dict, List
 
 from greenbtc.rpc.rpc_client import RpcClient
@@ -7,10 +5,10 @@ from greenbtc.rpc.rpc_client import RpcClient
 
 class HarvesterRpcClient(RpcClient):
     """
-    Client to GreenBTC RPC, connects to a local harvester. Uses HTTP/JSON, and converts back from
+    Client to Silicoin RPC, connects to a local harvester. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run GreenBTC's
-    protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
+    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
+    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
     to the full node.
     """
 

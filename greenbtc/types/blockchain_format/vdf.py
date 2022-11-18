@@ -44,16 +44,16 @@ def verify_vdf(
     )
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class VDFInfo(Streamable):
     challenge: bytes32  # Used to generate the discriminant (VDF group)
     number_of_iterations: uint64
     output: ClassgroupElement
 
 
-@streamable
 @dataclass(frozen=True)
+@streamable
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes

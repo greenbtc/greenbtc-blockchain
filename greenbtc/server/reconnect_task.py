@@ -1,13 +1,11 @@
 import asyncio
+import socket
 
-from typing import Optional
-
-from greenbtc.server.server import GreenBTCServer
+from greenbtc.server.server import ChiaServer
 from greenbtc.types.peer_info import PeerInfo
-from greenbtc.util.network import get_host_addr
 
 
-def start_reconnect_task(server: GreenBTCServer, peer_info_arg: PeerInfo, log, prefer_ipv6: Optional[bool]):
+def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
@@ -15,7 +13,7 @@ def start_reconnect_task(server: GreenBTCServer, peer_info_arg: PeerInfo, log, p
     if peer_info_arg.is_valid():
         peer_info = peer_info_arg
     else:
-        peer_info = PeerInfo(get_host_addr(peer_info_arg, prefer_ipv6), peer_info_arg.port)
+        peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
 
     async def connection_check():
         while True:
@@ -26,7 +24,7 @@ def start_reconnect_task(server: GreenBTCServer, peer_info_arg: PeerInfo, log, p
             if peer_retry:
                 log.info(f"Reconnecting to peer {peer_info}")
                 try:
-                    await server.start_client(peer_info, None)
+                    await server.start_client(peer_info, None, auth=auth)
                 except Exception as e:
                     log.info(f"Failed to connect to {peer_info} {e}")
             await asyncio.sleep(3)
