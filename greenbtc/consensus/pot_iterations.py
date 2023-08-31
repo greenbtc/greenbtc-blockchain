@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from decimal import Decimal
 
 from greenbtc.consensus.constants import ConsensusConstants
@@ -50,8 +52,8 @@ def calculate_iterations_quality(
     quality_string: bytes32,
     size: int,
     difficulty: uint64,
-    difficulty_coefficient: Decimal,
     cc_sp_output_hash: bytes32,
+    staking_coefficient: Decimal,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
@@ -60,7 +62,7 @@ def calculate_iterations_quality(
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
 
     iters = uint64(
-        int(difficulty * difficulty_coefficient)
+        int(difficulty * staking_coefficient)
         * int(difficulty_constant_factor)
         * int.from_bytes(sp_quality_string, "big", signed=False)
         // (int(pow(2, 256)) * int(_expected_plot_size(size)))

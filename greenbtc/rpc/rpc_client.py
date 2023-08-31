@@ -1,21 +1,27 @@
+from __future__ import annotations
+
 import asyncio
+from pathlib import Path
 from ssl import SSLContext
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
 
-from greenbtc.server.server import NodeType, ssl_context_for_client
+from greenbtc.server.outbound_message import NodeType
+from greenbtc.server.server import ssl_context_for_client
 from greenbtc.server.ssl_context import private_ssl_ca_paths
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.util.byte_types import hexstr_to_bytes
 from greenbtc.util.ints import uint16
 
+_T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
+
 
 class RpcClient:
     """
-    Client to Silicoin RPC, connects to a local service. Uses HTTP/JSON, and converts back from
+    Client to GreenBTC RPC, connects to a local service. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
-    Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
+    Note that this is not the same as the peer protocol, or wallet protocol (which run GreenBTC's
     protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
@@ -28,7 +34,13 @@ class RpcClient:
     port: uint16
 
     @classmethod
-    async def create(cls, self_hostname: str, port: uint16, root_path, net_config):
+    async def create(
+        cls: Type[_T_RpcClient],
+        self_hostname: str,
+        port: uint16,
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> _T_RpcClient:
         self = cls()
         self.hostname = self_hostname
         self.port = port
@@ -41,7 +53,7 @@ class RpcClient:
         self.closing_task = None
         return self
 
-    async def fetch(self, path, request_json) -> Any:
+    async def fetch(self, path, request_json) -> Dict[str, Any]:
         async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
             response.raise_for_status()
             res_json = await response.json()
@@ -67,9 +79,12 @@ class RpcClient:
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
 
-    def close(self):
+    async def healthz(self) -> Dict:
+        return await self.fetch("healthz", {})
+
+    def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())
 
-    async def await_closed(self):
+    async def await_closed(self) -> None:
         if self.closing_task is not None:
             await self.closing_task

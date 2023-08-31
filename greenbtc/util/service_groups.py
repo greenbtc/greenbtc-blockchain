@@ -1,19 +1,35 @@
+from __future__ import annotations
+
 from typing import Generator, KeysView
 
 SERVICES_FOR_GROUP = {
-    "all": "greenbtc_harvester greenbtc_timelord_launcher greenbtc_timelord greenbtc_farmer greenbtc_full_node greenbtc_wallet".split(),
-    "node": "greenbtc_full_node".split(),
-    "harvester": "greenbtc_harvester".split(),
-    "farmer": "greenbtc_harvester greenbtc_farmer greenbtc_full_node greenbtc_wallet".split(),
-    "farmer-no-wallet": "greenbtc_harvester greenbtc_farmer greenbtc_full_node".split(),
-    "farmer-only": "greenbtc_farmer".split(),
-    "timelord": "greenbtc_timelord_launcher greenbtc_timelord greenbtc_full_node".split(),
-    "timelord-only": "greenbtc_timelord".split(),
-    "timelord-launcher-only": "greenbtc_timelord_launcher".split(),
-    "wallet": "greenbtc_wallet greenbtc_full_node".split(),
-    "wallet-only": "greenbtc_wallet".split(),
-    "introducer": "greenbtc_introducer".split(),
-    "simulator": "greenbtc_full_node_simulator".split(),
+    "all": [
+        "greenbtc_harvester",
+        "greenbtc_timelord_launcher",
+        "greenbtc_timelord",
+        "greenbtc_farmer",
+        "greenbtc_full_node",
+        "greenbtc_wallet",
+        "greenbtc_data_layer",
+        "greenbtc_data_layer_http",
+    ],
+    # TODO: should this be `data_layer`?
+    "data": ["greenbtc_wallet", "greenbtc_data_layer"],
+    "data_layer_http": ["greenbtc_data_layer_http"],
+    "node": ["greenbtc_full_node"],
+    "harvester": ["greenbtc_harvester"],
+    "farmer": ["greenbtc_harvester", "greenbtc_farmer", "greenbtc_full_node", "greenbtc_wallet"],
+    "farmer-no-wallet": ["greenbtc_harvester", "greenbtc_farmer", "greenbtc_full_node"],
+    "farmer-only": ["greenbtc_farmer"],
+    "timelord": ["greenbtc_timelord_launcher", "greenbtc_timelord", "greenbtc_full_node"],
+    "timelord-only": ["greenbtc_timelord"],
+    "timelord-launcher-only": ["greenbtc_timelord_launcher"],
+    "wallet": ["greenbtc_wallet"],
+    "introducer": ["greenbtc_introducer"],
+    "simulator": ["greenbtc_full_node_simulator"],
+    "crawler": ["greenbtc_crawler"],
+    "seeder": ["greenbtc_crawler", "greenbtc_seeder"],
+    "seeder-only": ["greenbtc_seeder"],
 }
 
 

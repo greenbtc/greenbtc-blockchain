@@ -1,7 +1,9 @@
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from __future__ import annotations
 
-from blspy import G1Element, G2Element
+from dataclasses import dataclass
+from typing import Optional, List, Tuple
+
+from blspy import G2Element, G1Element
 
 from greenbtc.types.blockchain_format.pool_target import PoolTarget
 from greenbtc.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -15,8 +17,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewSignagePoint(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
@@ -24,10 +26,11 @@ class NewSignagePoint(Streamable):
     difficulty: uint64
     sub_slot_iters: uint64
     signage_point_index: uint8
+    peak_height: uint32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class DeclareProofOfSpace(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
@@ -37,20 +40,21 @@ class DeclareProofOfSpace(Streamable):
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
+    difficulty_coefficient: str
     pool_target: Optional[PoolTarget]
     pool_signature: Optional[G2Element]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FarmingInfo(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
@@ -58,27 +62,25 @@ class FarmingInfo(Streamable):
     passed: uint32
     proofs: uint32
     total_plots: uint32
+    lookup_time: uint64
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_signature: G2Element
     foliage_transaction_block_signature: G2Element
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FarmerStakings(Streamable):
     stakings: List[Tuple[G1Element, str]]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestStakings(Streamable):
+    height: uint32
     public_keys: List[G1Element]
-    # None means current peak
-    height: Optional[uint32]
-    # wallet can calculate this on itself
-    blocks: Optional[uint64]

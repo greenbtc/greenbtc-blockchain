@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 
-from greenbtc.server.ws_connection import WSChiaConnection
+from greenbtc.server.ws_connection import WSGreenBTCConnection
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.spend_bundle import SpendBundle
 
@@ -15,17 +17,17 @@ class TransactionQueueEntry:
     transaction: SpendBundle
     transaction_bytes: Optional[bytes]
     spend_name: bytes32
-    peer: Optional[WSChiaConnection]
+    peer: Optional[WSGreenBTCConnection]
     test: bool
 
-    def __lt__(self, other):
+    def __lt__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name < other.spend_name
 
-    def __le__(self, other):
+    def __le__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name <= other.spend_name
 
-    def __gt__(self, other):
+    def __gt__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name > other.spend_name
 
-    def __ge__(self, other):
+    def __ge__(self, other: TransactionQueueEntry) -> bool:
         return self.spend_name >= other.spend_name

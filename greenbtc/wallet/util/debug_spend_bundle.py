@@ -1,13 +1,14 @@
-from typing import List, Tuple
+from __future__ import annotations
+
+from typing import List
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
-from greenbtc.types.blockchain_format.coin import Coin
-from greenbtc.types.blockchain_format.program import Program, INFINITE_COST
-from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.consensus.default_constants import DEFAULT_CONSTANTS
+from greenbtc.types.blockchain_format.coin import Coin
+from greenbtc.types.blockchain_format.program import INFINITE_COST, Program
 from greenbtc.types.condition_opcodes import ConditionOpcode
 from greenbtc.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from greenbtc.util.hash import std_hash
@@ -21,7 +22,7 @@ KFA = {v: k for k, v in CONDITIONS.items()}
 # we may need also to save the `genesis_coin_mod` or its hash
 
 
-def disassemble(sexp):
+def disassemble(sexp: Program):
     """
     This version of `disassemble` also disassembles condition opcodes like `ASSERT_ANNOUNCEMENT_CONSUMED`.
     """
@@ -62,53 +63,67 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         solution = Program.from_bytes(bytes(coin_spend.solution))
         coin_name = coin.name()
 
+        print(f"consuming coin {dump_coin(coin)}")
+        print(f"  with id {coin_name.hex()}")
+        print()
+        print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
+
         if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
+            print()
             print("*** BAD PUZZLE REVEAL")
             print(f"{puzzle_reveal.get_tree_hash().hex()} vs {coin_spend.coin.puzzle_hash.hex()}")
             print("*" * 80)
+            print()
             continue
 
-        print(f"consuming coin {dump_coin(coin)}")
-        print(f"  with id {coin_name}")
+        conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
+        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
+            pks.append(G1Element.from_bytes(pk_bytes))
+            msgs.append(m)
         print()
-        print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
-        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        if error:
-            print(f"*** error {error}")
-        elif conditions is not None:
-            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
-                pks.append(G1Element.from_bytes(pk))
-                msgs.append(m)
-            print()
-            cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)  # type: ignore
-            print(disassemble(r))
-            print()
-            if conditions and len(conditions) > 0:
-                print("grouped conditions:")
-                for condition_programs in conditions.values():
-                    print()
-                    for c in condition_programs:
-                        if len(c.vars) == 1:
-                            as_prog = Program.to([c.opcode, c.vars[0]])
-                        if len(c.vars) == 2:
-                            as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
-                        print(f"  {disassemble(as_prog)}")
-                created_coin_announcements.extend(
-                    [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
-                )
-                asserted_coin_announcements.extend(
-                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
-                )
-                created_puzzle_announcements.extend(
-                    [puzzle_reveal.get_tree_hash()] + _.vars
-                    for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
-                )
-                asserted_puzzle_announcements.extend(
-                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
-                )
+        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        print(disassemble(r))
+        create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
+        print()
+        if conditions and len(conditions) > 0:
+            print("grouped conditions:")
+            for condition_programs in conditions.values():
                 print()
-            else:
-                print("(no output conditions generated)")
+                for c in condition_programs:
+                    if len(c.vars) == 0:
+                        as_prog = Program.to([c.opcode])
+                    if len(c.vars) == 1:
+                        as_prog = Program.to([c.opcode, c.vars[0]])
+                    if len(c.vars) == 2:
+                        if c.opcode == ConditionOpcode.CREATE_COIN:
+                            cc = next(
+                                cc
+                                for cc in create_coin_conditions
+                                if cc.at("rf").atom == c.vars[0] and cc.at("rrf").atom == c.vars[1]
+                            )
+                            if cc.at("rrr").atom is None:
+                                as_prog = Program.to([c.opcode, c.vars[0], c.vars[1], cc.at("rrrf")])
+                            else:
+                                as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                        else:
+                            as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                    print(f"  {disassemble(as_prog)}")
+            created_coin_announcements.extend(
+                [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
+            )
+            asserted_coin_announcements.extend(
+                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
+            )
+            created_puzzle_announcements.extend(
+                [puzzle_reveal.get_tree_hash()] + _.vars
+                for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
+            )
+            asserted_puzzle_announcements.extend(
+                [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [])]
+            )
+            print()
+        else:
+            print("(no output conditions generated)")
         print()
         print("-------")
 
@@ -124,19 +139,19 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print("spent coins")
     for coin in sorted(spent, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"      => spent coin id {coin.name()}")
+        print(f"      => spent coin id {coin.name().hex()}")
     print()
     print("created coins")
     for coin in sorted(created, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"      => created coin id {coin.name()}")
+        print(f"      => created coin id {coin.name().hex()}")
 
     if ephemeral:
         print()
         print("ephemeral coins")
         for coin in sorted(ephemeral, key=lambda _: _.name()):
             print(f"  {dump_coin(coin)}")
-            print(f"      => created coin id {coin.name()}")
+            print(f"      => created coin id {coin.name().hex()}")
 
     created_coin_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_coin_announcements]
     if created_coin_announcement_pairs:
@@ -185,14 +200,5 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print(f"aggregated signature check pass: {validates}")
     print(f"pks: {pks}")
     print(f"msgs: {[msg.hex() for msg in msgs]}")
-    print(f"  msg_data: {[msg.hex()[:-128] for msg in msgs]}")
-    print(f"  coin_ids: {[msg.hex()[-128:-64] for msg in msgs]}")
-    print(f"  add_data: {[msg.hex()[-64:] for msg in msgs]}")
+    print(f"add_data: {agg_sig_additional_data.hex()}")
     print(f"signature: {spend_bundle.aggregated_signature}")
-
-
-def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
-    output_conditions = [
-        [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
-    ]
-    return Program.to(output_conditions)

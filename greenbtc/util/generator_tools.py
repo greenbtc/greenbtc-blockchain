@@ -1,17 +1,21 @@
-from typing import List, Tuple
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 from chiabip158 import PyBIP158
 
+from greenbtc.consensus.cost_calculator import NPCResult
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.full_block import FullBlock
 from greenbtc.types.header_block import HeaderBlock
-from greenbtc.types.name_puzzle_condition import NPC
-from greenbtc.util.condition_tools import created_outputs_for_conditions_dict
+from greenbtc.types.spend_bundle_conditions import SpendBundleConditions
+from greenbtc.util.ints import uint64
 
 
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
     addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
     if block.is_transaction_block():
         for coin in addition_coins:
@@ -37,17 +41,20 @@ def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_n
     )
 
 
-def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
+def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
     additions: List[Coin] = []
 
-    for npc in npc_list:
-        for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+    if npc_result.conds is None:
+        return []
+    for spend in npc_result.conds.spends:
+        for puzzle_hash, amount, _ in spend.create_coin:
+            coin = Coin(spend.coin_id, puzzle_hash, amount)
             additions.append(coin)
 
     return additions
 
 
-def tx_removals_and_additions(npc_list: List[NPC]) -> Tuple[List[bytes32], List[Coin]]:
+def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple[List[bytes32], List[Coin]]:
     """
     Doesn't return farmer and pool reward.
     """
@@ -56,11 +63,11 @@ def tx_removals_and_additions(npc_list: List[NPC]) -> Tuple[List[bytes32], List[
     additions: List[Coin] = []
 
     # build removals list
-    if npc_list is None:
+    if results is None:
         return [], []
-    for npc in npc_list:
-        removals.append(npc.coin_name)
-
-    additions.extend(additions_for_npc(npc_list))
+    for spend in results.spends:
+        removals.append(bytes32(spend.coin_id))
+        for puzzle_hash, amount, _ in spend.create_coin:
+            additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount)))
 
     return removals, additions

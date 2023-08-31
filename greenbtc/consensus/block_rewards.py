@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from greenbtc.util.ints import uint32, uint64
 
 # 1 GreenBTC coin = 1,000,000,000,000 = 1 trillion mojo.
@@ -52,3 +54,4 @@ def calculate_base_farmer_reward(height: uint32) -> uint64:
         return uint64(int((1 / 8) * 0.1 * _mojo_per_greenbtc))
     else:
         return uint64(int((1 / 8) * 0.05 * _mojo_per_greenbtc))
+

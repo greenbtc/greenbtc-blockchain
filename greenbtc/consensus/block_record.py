@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
 from blspy import G1Element
+from typing_extensions import Protocol
 
 from greenbtc.consensus.constants import ConsensusConstants
 from greenbtc.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
@@ -13,8 +16,34 @@ from greenbtc.util.ints import uint8, uint32, uint64, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
+class BlockRecordProtocol(Protocol):
+    @property
+    def header_hash(self) -> bytes32:
+        ...
+
+    @property
+    def height(self) -> uint32:
+        ...
+
+    @property
+    def timestamp(self) -> Optional[uint64]:
+        ...
+
+    @property
+    def prev_transaction_block_height(self) -> uint32:
+        ...
+
+    @property
+    def prev_transaction_block_hash(self) -> Optional[bytes32]:
+        ...
+
+    @property
+    def is_transaction_block(self) -> bool:
+        return self.timestamp is not None
+
+
 @streamable
+@dataclass(frozen=True)
 class BlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
@@ -90,5 +119,5 @@ class BlockRecord(Streamable):
             self.required_iters,
         )
 
-    def sp_total_iters(self, constants: ConsensusConstants):
-        return self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants)
+    def sp_total_iters(self, constants: ConsensusConstants) -> uint128:
+        return uint128(self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants))

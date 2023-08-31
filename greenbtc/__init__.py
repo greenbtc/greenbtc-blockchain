@@ -1,10 +1,9 @@
-import nest_asyncio
+from __future__ import annotations
+
 from pkg_resources import DistributionNotFound, get_distribution, resource_filename
 
-nest_asyncio.apply()
-
 try:
-    __version__ = "1.6.0"
+    __version__ = get_distribution("greenbtc-blockchain").version
 except DistributionNotFound:
     # package is not installed
     __version__ = "unknown"

@@ -1,17 +1,20 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
 from greenbtc.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
-from greenbtc.types.blockchain_format.program import SerializedProgram
 from greenbtc.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from greenbtc.types.blockchain_format.serialized_program import SerializedProgram
+from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.vdf import VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
-from greenbtc.util.ints import uint32
+from greenbtc.util.ints import uint32, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
@@ -27,16 +30,16 @@ class UnfinishedBlock(Streamable):
     ]  # List of block heights of previous generators referenced in this block
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def partial_hash(self):
+    def partial_hash(self) -> bytes32:
         return self.reward_chain_block.get_hash()
 
     def is_transaction_block(self) -> bool:
         return self.foliage.foliage_transaction_block_hash is not None
 
     @property
-    def total_iters(self):
+    def total_iters(self) -> uint128:
         return self.reward_chain_block.total_iters

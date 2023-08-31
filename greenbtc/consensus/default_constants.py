@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 from greenbtc.util.ints import uint64
 
 from .constants import ConsensusConstants
 
-testnet_kwargs = {
+default_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
     "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 16,  # Must be less than half of SLOT_BLOCKS_TARGET
     "MAX_SUB_SLOT_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_BLOCKS
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
-    "SUB_SLOT_ITERS_STARTING": 2 ** 27,
+    "SUB_SLOT_ITERS_STARTING": 2**27,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_CONSTANT_FACTOR": 2 ** 60,
+    "DIFFICULTY_CONSTANT_FACTOR": 2**60,
     "DIFFICULTY_STARTING": 128,
     "DIFFICULTY_CHANGE_MAX_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
@@ -24,6 +26,7 @@ testnet_kwargs = {
     "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 5 * 60,  # The next block can have a timestamp of at most these many seconds in the future
+    "MAX_FUTURE_TIME2": 2 * 60,  # The next block can have a timestamp of at most these many seconds in the future
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
@@ -38,8 +41,8 @@ testnet_kwargs = {
         "8b161e224bb1339e5a370581318e56f30973f4806703d12ac6c65119adb26808"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Size of mempool = 50x the size of block # temporary change until #9125 gets in
-    "MEMPOOL_BLOCK_BUFFER": 10,
+    # Size of mempool = 50x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 50,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Max block cost in clvm cost units
@@ -47,15 +50,27 @@ testnet_kwargs = {
     # The cost per byte of generator program
     "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "STAKING_ESTIMATE_BLOCK_RANGE": 4608 * 3,
-    "BLOCKS_CACHE_SIZE": 4608 * 3 + (128 * 4),  # should be bigger than STAKING_ESTIMAGE_BLOCK_RANGE
+    "BLOCKS_CACHE_SIZE": 4608 * 3 + (128 * 4),
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
-    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,
-    "NETWORK_TYPE": 0,
+    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "MAX_GENERATOR_SIZE": 1000000,
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
     "POOL_SUB_SLOT_ITERS": 37600000000,  # iters limit * NUM_SPS
+    "STAKING_BLOCKS_SIZE": 4608 * 3,  # less BLOCKS_CACHE_SIZE
+    "SOFT_FORK2_HEIGHT": 1344911,
+    # November 14, 2023
+    "SOFT_FORK3_HEIGHT": 1349911,
+    # June 2024
+    "HARD_FORK_HEIGHT": 3031831,
+    # June 2027
+    "PLOT_FILTER_128_HEIGHT": 8077591,
+    # June 2030
+    "PLOT_FILTER_64_HEIGHT": 13123351,
+    # June 2033
+    "PLOT_FILTER_32_HEIGHT": 18169111,
+    # Disallow plots from passing the plot filter for more than one out of any four consecutive signage points.
+    "UNIQUE_PLOTS_WINDOW": 4,
 }
 
 
-DEFAULT_CONSTANTS = ConsensusConstants(**testnet_kwargs)  # type: ignore
+DEFAULT_CONSTANTS = ConsensusConstants(**default_kwargs)  # type: ignore

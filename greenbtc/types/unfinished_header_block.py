@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
 from greenbtc.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock
 from greenbtc.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.vdf import VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
+from greenbtc.util.ints import uint128
 from greenbtc.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
@@ -21,13 +25,13 @@ class UnfinishedHeaderBlock(Streamable):
     transactions_filter: bytes  # Filter for block transactions
 
     @property
-    def prev_header_hash(self):
+    def prev_header_hash(self) -> bytes32:
         return self.foliage.prev_block_hash
 
     @property
-    def header_hash(self):
+    def header_hash(self) -> bytes32:
         return self.foliage.get_hash()
 
     @property
-    def total_iters(self):
+    def total_iters(self) -> uint128:
         return self.reward_chain_block.total_iters
