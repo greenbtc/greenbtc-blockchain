@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from blspy import G2Element
+from chia_rs import G2Element
 from clvm_tools import binutils
 
 from greenbtc.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -28,7 +28,7 @@ def print_conditions(spend_bundle: SpendBundle):
 
 
 async def main() -> None:
-    rpc_port: uint16 = uint16(8555)
+    rpc_port: uint16 = uint16(23334)
     self_hostname = "localhost"
     path = DEFAULT_ROOT_PATH
     config = load_config(path, "config.yaml")

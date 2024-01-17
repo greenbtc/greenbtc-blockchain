@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
     # ignoring hint error here for:
-    # https://github.com/GreenBTC-Network/clvm/pull/102
-    # https://github.com/GreenBTC-Network/clvm/pull/106
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
     return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)  # type: ignore[no-any-return] # noqa: E501
 
 
@@ -38,8 +38,8 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
     # ignoring hint error here for:
-    # https://github.com/GreenBTC-Network/clvm/pull/102
-    # https://github.com/GreenBTC-Network/clvm/pull/106
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
     return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
 
 
@@ -112,7 +112,7 @@ class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
 
-    def other(self) -> "Side":
+    def other(self) -> Side:
         if self == Side.LEFT:
             return Side.RIGHT
 
@@ -154,7 +154,7 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
+    def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -173,9 +173,9 @@ class ProofOfInclusionLayer:
     @classmethod
     def from_internal_node(
         cls,
-        internal_node: "InternalNode",
+        internal_node: InternalNode,
         traversal_child_hash: bytes32,
-    ) -> "ProofOfInclusionLayer":
+    ) -> ProofOfInclusionLayer:
         return ProofOfInclusionLayer(
             other_hash_side=internal_node.other_child_side(hash=traversal_child_hash),
             other_hash=internal_node.other_child_hash(hash=traversal_child_hash),
@@ -183,7 +183,7 @@ class ProofOfInclusionLayer:
         )
 
     @classmethod
-    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> "ProofOfInclusionLayer":
+    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> ProofOfInclusionLayer:
         combined_hash = calculate_internal_hash(
             hash=primary_hash,
             other_hash_side=other_hash_side,
@@ -216,8 +216,8 @@ class ProofOfInclusion:
         return [layer.other_hash for layer in self.layers]
 
     def as_program(self) -> Program:
-        # https://github.com/GreenBTC-Network/clvm/pull/102
-        # https://github.com/GreenBTC-Network/clvm/pull/106
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
         return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
 
     def valid(self) -> bool:
@@ -250,7 +250,7 @@ class InternalNode:
     atom: None = None
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
+    def from_row(cls, row: aiosqlite.Row) -> InternalNode:
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
@@ -285,7 +285,7 @@ class Root:
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "Root":
+    def from_row(cls, row: aiosqlite.Row) -> Root:
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None
@@ -308,7 +308,7 @@ class Root:
         }
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> "Root":
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
             tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
@@ -690,6 +690,21 @@ class SyncStatus:
     generation: int
     target_root_hash: bytes32
     target_generation: int
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class PluginRemote:
+    url: str
+    # repr=False to avoid leaking secrets
+    headers: Dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
+        return cls(
+            url=marshalled["url"],
+            headers=marshalled["headers"],
+        )
 
 
 @dataclasses.dataclass(frozen=True)

@@ -6,7 +6,7 @@ from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from chiapos import DiskProver
 from typing_extensions import final
 
@@ -43,8 +43,8 @@ class PlotInfo:
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
-    local_public_key: G1Element  # staking
-    farmer_public_key: G1Element  # staking
+    local_public_key: G1Element  # stake
+    farmer_public_key: G1Element  # stake
     file_size: int
     time_modified: float
 

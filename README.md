@@ -25,36 +25,30 @@ GreenBTC Website: https://greenbtc.top
 
 ## How to staking
 
-1. Query the staking balance:
+1. Query the stake balance:
 
    ```
-   $ greenbtc staking info
+   $ greenbtc stake info
    ...
-   Staking balance:  0
-   Staking address:  gbtc16h0zj4q0uyt3frl7tmcy9whl30xv75g7qqcgulwht79a04ahxyrsmf56se
-   ...
-   ```
-
-2. Send coins to the staking:
-
-   ```
-   $ greenbtc staking send -a 1
-   ```
-
-   Wait for the transaction get confirmed, query staking balance again:
-
-   ```
-   $ greenbtc staking info
-   ...
-   Staking balance:  1
-   Staking address:  gbtc16h0zj4q0uyt3frl7tmcy9whl30xv75g7qqcgulwht79a04ahxyrsmf56se
+	Stake Balance: 0.0
+	Stake Balance Other: 0.0
+	Stake Balance Income: 0.0
+	Stake Balance 24H Exp: 0.0
+	Stake Reward: 0.0
+	Stake Address: dpos:gbtc:1*************************************************
    ...
    ```
 
-3. Withdraw coins from the staking address:
+2. Send coins to the stake:
 
    ```
-   $ greenbtc staking withdraw
+   $ greenbtc stake send -a 1
+   ```
+
+3. Withdraw old stake
+
+   ```
+   $ greenbtc stake withdraw_old
    ```
 
    Do a transaction to transfer the coins from the staking address to now wallet receive address.

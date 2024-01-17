@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from greenbtc.protocols.wallet_protocol import CoinState
+from chia_rs import CoinState
+
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.util.ints import uint32, uint64

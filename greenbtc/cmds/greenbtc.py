@@ -9,6 +9,7 @@ from greenbtc import __version__
 from greenbtc.cmds.beta import beta_cmd
 from greenbtc.cmds.completion import completion
 from greenbtc.cmds.configure import configure_cmd
+from greenbtc.cmds.dao import dao_cmd
 from greenbtc.cmds.data import data_cmd
 from greenbtc.cmds.db import db_cmd
 from greenbtc.cmds.dev import dev_cmd
@@ -26,7 +27,7 @@ from greenbtc.cmds.show import show_cmd
 from greenbtc.cmds.start import start_cmd
 from greenbtc.cmds.stop import stop_cmd
 from greenbtc.cmds.wallet import wallet_cmd
-from greenbtc.cmds.staking import staking_cmd
+from greenbtc.cmds.stake import stake_cmd
 from greenbtc.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from greenbtc.util.errors import KeychainCurrentPassphraseIsInvalid
 from greenbtc.util.keychain import Keychain, set_keys_root_path
@@ -113,7 +114,7 @@ def run_daemon_cmd(ctx: click.Context, wait_for_unlock: bool) -> None:
 cli.add_command(keys_cmd)
 cli.add_command(plots_cmd)
 cli.add_command(wallet_cmd)
-cli.add_command(staking_cmd)
+cli.add_command(stake_cmd)
 cli.add_command(plotnft_cmd)
 cli.add_command(configure_cmd)
 cli.add_command(init_cmd)
@@ -130,6 +131,7 @@ cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 cli.add_command(completion)
+cli.add_command(dao_cmd)
 cli.add_command(dev_cmd)
 
 

@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 
 from greenbtc.consensus.block_record import BlockRecord
 from greenbtc.consensus.blockchain_interface import BlockchainInterface
+from greenbtc.consensus.coinbase import create_puzzlehash_for_pk
 from greenbtc.consensus.constants import ConsensusConstants
 from greenbtc.consensus.deficit import calculate_deficit
 from greenbtc.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -168,5 +169,5 @@ def header_block_to_sub_block_record(
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
         ses,
-        block.reward_chain_block.proof_of_space.farmer_public_key,
+        create_puzzlehash_for_pk(block.reward_chain_block.proof_of_space.farmer_public_key),
     )

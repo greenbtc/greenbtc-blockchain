@@ -5,25 +5,25 @@ npm install -g license-checker
 
 cd ../greenbtc-blockchain-gui || exit 1
 
-# npm ci
+npm ci
 
-# sum=$(license-checker --summary)
-# printf "%s\n" "$sum"
+sum=$(license-checker --summary)
+printf "%s\n" "$sum"
 
-# license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
+license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
 
-# # Split the license list by newline character into an array
-# IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
+# Split the license list by newline character into an array
+IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 
-# #print the contents of the array
-# printf '%s\n' "${licenses_array[@]}"
+#print the contents of the array
+printf '%s\n' "${licenses_array[@]}"
 
-# for i in "${licenses_array[@]}"; do
-    # dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
-    # mkdir -p "$dirname"
-    # echo "$dirname"
-    # cp "$i" "$dirname"
-# done
+for i in "${licenses_array[@]}"; do
+    dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
+    mkdir -p "$dirname"
+    echo "$dirname"
+    cp "$i" "$dirname"
+done
 
 mv licenses/ ../build_scripts/dist/daemon
 cd ../build_scripts || exit 1

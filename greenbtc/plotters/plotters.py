@@ -51,11 +51,12 @@ class Options(Enum):
     BLADEBIT_NO_T2_DIRECT = 36
     COMPRESSION = 37
     BLADEBIT_DEVICE_INDEX = 38
-    BLADEBIT_NO_DIRECT_DOWNLOADS = 39
     CUDA_TMP_DIR = 40
+    BLADEBIT_HYBRID_128_MODE = 41
+    BLADEBIT_HYBRID_16_MODE = 42
 
 
-chia_plotter_options = [
+greenbtc_plotter_options = [
     Options.TMP_DIR,
     Options.TMP_DIR2,
     Options.K,
@@ -113,7 +114,8 @@ bladebit_cuda_plotter_options = [
     Options.FINAL_DIR,
     Options.COMPRESSION,
     Options.BLADEBIT_DEVICE_INDEX,
-    Options.BLADEBIT_NO_DIRECT_DOWNLOADS,
+    Options.BLADEBIT_HYBRID_128_MODE,
+    Options.BLADEBIT_HYBRID_16_MODE,
 ]
 
 bladebit_ram_plotter_options = [
@@ -466,11 +468,18 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="The CUDA device index",
                 default=0,
             )
-        if option is Options.BLADEBIT_NO_DIRECT_DOWNLOADS:
+        if option is Options.BLADEBIT_HYBRID_128_MODE:
             parser.add_argument(
-                "--no-direct-downloads",
+                "--disk-128",
                 action="store_true",
-                help="Don't allocate host tables using pinned buffers",
+                help="Enable hybrid disk plotting for 128G system RAM",
+                default=False,
+            )
+        if option is Options.BLADEBIT_HYBRID_16_MODE:
+            parser.add_argument(
+                "--disk-16",
+                action="store_true",
+                help="Enable hybrid disk plotting for 16G system RAM",
                 default=False,
             )
 
@@ -496,7 +505,7 @@ def call_plotters(root_path: Path, args):
     plotters = argparse.ArgumentParser("greenbtc plotters", description="Available options.")
     subparsers = plotters.add_subparsers(help="Available options", dest="plotter")
 
-    build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Create a plot with the default greenbtc plotter")
+    build_parser(subparsers, root_path, greenbtc_plotter_options, "chiapos", "Create a plot with the default greenbtc plotter")
     build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Create a plot with madMAx")
 
     bladebit_parser = subparsers.add_parser("bladebit", help="Create a plot with bladebit")

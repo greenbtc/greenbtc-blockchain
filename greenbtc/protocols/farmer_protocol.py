@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
-from blspy import G2Element, G1Element
+from chia_rs import G1Element, G2Element
 
 from greenbtc.types.blockchain_format.pool_target import PoolTarget
 from greenbtc.types.blockchain_format.proof_of_space import ProofOfSpace
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import uint8, uint32, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -37,10 +38,10 @@ class DeclareProofOfSpace(Streamable):
     signage_point_index: uint8
     reward_chain_sp: bytes32
     proof_of_space: ProofOfSpace
+    proof_of_stake: ProofOfStake
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
-    difficulty_coefficient: str
     pool_target: Optional[PoolTarget]
     pool_signature: Optional[G2Element]
 
@@ -75,12 +76,12 @@ class SignedValues(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class FarmerStakings(Streamable):
-    stakings: List[Tuple[G1Element, str]]
+class FarmerStakeCoefficients(Streamable):
+    stake_coefficients: List[Tuple[G1Element, uint64]]
 
 
 @streamable
 @dataclass(frozen=True)
-class RequestStakings(Streamable):
+class RequestStakeCoefficients(Streamable):
     height: uint32
-    public_keys: List[G1Element]
+    farmer_public_keys: List[G1Element]

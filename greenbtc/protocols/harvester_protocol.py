@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from greenbtc.types.blockchain_format.proof_of_space import ProofOfSpace
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import int16, uint8, uint32, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -41,7 +42,8 @@ class NewSignagePointHarvester(Streamable):
     sp_hash: bytes32
     pool_difficulties: List[PoolDifficulty]
     filter_prefix_bits: uint8
-    staking_coefficients: List[Tuple[G1Element, str]]  # difficulty_coefficient of each farmer public key's puzzle hash
+    stake_height: uint32
+    stake_coefficients: List[Tuple[G1Element, uint64]]
 
 
 @streamable
@@ -51,8 +53,8 @@ class NewProofOfSpace(Streamable):
     sp_hash: bytes32
     plot_identifier: str
     proof: ProofOfSpace
+    proof_of_stake: ProofOfStake
     signage_point_index: uint8
-    difficulty_coefficient: str
 
 
 @streamable

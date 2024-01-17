@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from greenbtc.util.ints import uint8, uint32
 from greenbtc.util.streamable import Streamable, streamable
@@ -26,17 +26,27 @@ class WalletType(IntEnum):
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
     VC = 13
+    DAO = 14
+    DAO_CAT = 15
+    CRCAT = 57
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
+    CRCAT_PENDING = 2
+    CRCAT = 3
+    STAKE = 81
 
 
 class RemarkDataType(IntEnum):
     NORMAL = 0
     CUSTODY = 1
     CLAWBACK = 2
+    STAKE = 82
+
+
+T = TypeVar("T", contravariant=True)
 
 
 @dataclass(frozen=True)
@@ -45,7 +55,7 @@ class WalletIdentifier:
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol[T]) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
 
 

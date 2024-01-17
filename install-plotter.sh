@@ -68,7 +68,7 @@ get_bladebit_url() {
   OS="$2"           # "ubuntu", "centos", "macos"
   ARCH="$3"         # "x86-64", "arm64"
 
-  GITHUB_BASE_URL="https://github.com/GreenBTC-Network/bladebit/releases/download"
+  GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
   BLADEBIT_FILENAME="$(get_bladebit_filename "$BLADEBIT_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_FILENAME}"
@@ -79,7 +79,7 @@ get_bladebit_cuda_url() {
   OS="$2"           # "ubuntu", "centos", "macos"
   ARCH="$3"         # "x86-64", "arm64"
 
-  GITHUB_BASE_URL="https://github.com/GreenBTC-Network/bladebit/releases/download"
+  GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
   BLADEBIT_CUDA_FILENAME="$(get_bladebit_cuda_filename "$BLADEBIT_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_CUDA_FILENAME}"
@@ -91,9 +91,9 @@ get_madmax_filename() {
   OS="$3"
   ARCH="$4"
 
-  export GREENBTC_PLOT="chia_plot"
+  export GREENBTC_PLOT="greenbtc_plot"
   if [ "$KSIZE" = "k34" ]; then
-    export GREENBTC_PLOT="chia_plot_k34"
+    export GREENBTC_PLOT="greenbtc_plot_k34"
   fi
   SUFFIX=""
   if [ "$OS" = "macos" ]; then
@@ -116,7 +116,7 @@ get_madmax_url() {
   OS="$3"
   ARCH="$4"
 
-  GITHUB_BASE_URL="https://github.com/greenbtc/greenbtc-plotter-madmax/releases/download"
+  GITHUB_BASE_URL="https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
   MADMAX_FILENAME="$(get_madmax_filename "$KSIZE" "$MADMAX_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${MADMAX_VER}/${MADMAX_FILENAME}"
@@ -127,7 +127,7 @@ if [ "$1" = "-h" ] || [ "$1" = "" ]; then
   exit 0
 fi
 
-DEFAULT_BLADEBIT_VERSION="v3.0.0"
+DEFAULT_BLADEBIT_VERSION="v3.1.0"
 DEFAULT_BLADEBIT_VERSION_FOR_MACOS="v2.0.1"
 DEFAULT_MADMAX_VERSION="0.0.2"
 VERSION=
@@ -242,11 +242,11 @@ elif [ "$PLOTTER" = "madmax" ]; then
   # k32 MadMax binary
   url="$(get_madmax_url "k32" "$VERSION" "$OS" "$ARCH")"
   madmax_filename="$(get_madmax_filename "k32" "$VERSION" "$OS" "$ARCH")"
-  handle_binary "$url" "$madmax_filename" "chia_plot"
+  handle_binary "$url" "$madmax_filename" "greenbtc_plot"
   # k34 MadMax binary
   url="$(get_madmax_url "k34" "$VERSION" "$OS" "$ARCH")"
   madmax_filename="$(get_madmax_filename "k34" "$VERSION" "$OS" "$ARCH")"
-  handle_binary "$url" "$madmax_filename" "chia_plot_k34"
+  handle_binary "$url" "$madmax_filename" "greenbtc_plot_k34"
 else
   usage
 fi

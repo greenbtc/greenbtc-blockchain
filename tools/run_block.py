@@ -61,7 +61,7 @@ from greenbtc.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompi
 from greenbtc.wallet.uncurried_puzzle import uncurry_puzzle
 
 DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clsp", package_or_requirement="greenbtc.wallet.puzzles"
+    "chialisp_deserialisation.clsp", package_or_requirement="greenbtc.consensus.puzzles"
 )
 
 
@@ -104,7 +104,7 @@ def npc_to_dict(npc: NPC):
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
     block_args = [bytes(a) for a in block_generator.generator_refs]
-    cost, block_result = block_generator.program.run_with_cost(max_cost, DESERIALIZE_MOD, block_args)
+    cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
 
     coin_spends = block_result.first()
 

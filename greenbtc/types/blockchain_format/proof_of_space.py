@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from typing import Optional, cast
 
 from bitstring import BitArray
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import Verifier
 
 from greenbtc.consensus.constants import ConsensusConstants
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.util.hash import std_hash
-from greenbtc.util.ints import uint8, uint32
+from greenbtc.util.ints import uint8, uint32, uint64
 from greenbtc.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class ProofOfSpace(Streamable):
     farmer_public_key: G1Element
 
     @property
-    def plot_public_key(self):
+    def plot_public_key(self) -> G1Element:
         return generate_plot_public_key(
             self.local_public_key, self.farmer_public_key, self.pool_contract_puzzle_hash is not None
         )

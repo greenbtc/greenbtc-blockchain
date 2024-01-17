@@ -8,6 +8,7 @@ from greenbtc.types.blockchain_format.reward_chain_block import RewardChainBlock
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.vdf import VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import uint32, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -18,6 +19,7 @@ class HeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator (but with filter), used by light clients
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_block: RewardChainBlock  # Reward chain trunk data
+    proof_of_stake: ProofOfStake  # proof of stake
     challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     challenge_chain_ip_proof: VDFProof
     reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot

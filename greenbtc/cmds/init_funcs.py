@@ -145,7 +145,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
             )
 
         # Set the pool pks in the farmer
-        pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
+        pool_pubkeys_hex = {bytes(pk).hex() for pk in pool_child_pubkeys}
         if "pool_public_keys" in config["farmer"]:
             for pk_hex in config["farmer"]["pool_public_keys"]:
                 # Add original ones in config
@@ -405,6 +405,8 @@ def greenbtc_init(
     else:
         config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        if "v2_r1" not in db_path_replaced:
+            db_path_replaced = db_path_replaced.replace("v2", "v2_r1")
         db_path = path_from_root(root_path, db_path_replaced)
         db_path.parent.mkdir(parents=True, exist_ok=True)
         try:

@@ -51,6 +51,42 @@ def db_upgrade_cmd(
         print(f"FAILED: {e}")
 
 
+
+@db_cmd.command("upgradev3", help="upgrade a v1 database to v3")
+@click.option("--input", "in_db_path", default=None, type=click.Path(), help="specify input database file")
+@click.option("--output", "out_db_path", default=None, type=click.Path(), help="specify output database file")
+@click.option(
+    "--no-update-config",
+    default=False,
+    is_flag=True,
+    help="don't update config file to point to new database. When specifying a "
+    "custom output file, the config will not be updated regardless",
+)
+@click.option(
+    "--force",
+    default=False,
+    is_flag=True,
+    help="force conversion despite warnings",
+)
+@click.pass_context
+def db_upgrade_cmd(
+    ctx: click.Context,
+    in_db_path: Optional[str],
+    out_db_path: Optional[str],
+    no_update_config: bool,
+    force: bool,
+) -> None:
+    try:
+        db_upgrade_func(
+            Path(ctx.obj["root_path"]),
+            None if in_db_path is None else Path(in_db_path),
+            None if out_db_path is None else Path(out_db_path),
+            no_update_config=no_update_config,
+            force=force,
+        )
+    except RuntimeError as e:
+        print(f"FAILED: {e}")
+
 @db_cmd.command("validate", help="validate the (v2) blockchain database. Does not verify proofs")
 @click.option("--db", "in_db_path", default=None, type=click.Path(), help="Specifies which database file to validate")
 @click.option(

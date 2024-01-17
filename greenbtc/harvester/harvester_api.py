@@ -6,8 +6,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from decimal import Decimal
-from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from greenbtc.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from greenbtc.harvester.harvester import Harvester
@@ -25,6 +24,7 @@ from greenbtc.types.blockchain_format.proof_of_space import (
     passes_plot_filter,
 )
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.api_decorators import api_request
 from greenbtc.util.ints import uint8, uint32, uint64
 from greenbtc.wallet.derive_keys import master_sk_to_local_sk
@@ -85,13 +85,11 @@ class HarvesterAPI:
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
-        staking_coefficients = {bytes(k): v for k, v in new_challenge.staking_coefficients}
+        stake_coefficients = {bytes(k): v for k, v in new_challenge.stake_coefficients}
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup(
-                filename: Path, plot_info: PlotInfo, difficulty_coefficient: Decimal
-        ) -> List[Tuple[bytes32, ProofOfSpace]]:
+        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[Tuple[bytes32, ProofOfSpace, ProofOfStake]]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
@@ -127,7 +125,11 @@ class HarvesterAPI:
                     )
                     return []
 
-                responses: List[Tuple[bytes32, ProofOfSpace]] = []
+                stake_coefficient: Optional[uint64] = stake_coefficients.get(bytes(plot_info.farmer_public_key))
+                if stake_coefficient is None:
+                    return []
+
+                responses: List[Tuple[bytes32, ProofOfSpace, ProofOfStake]] = []
                 if quality_strings is not None:
                     difficulty = new_challenge.difficulty
                     sub_slot_iters = new_challenge.sub_slot_iters
@@ -142,13 +144,14 @@ class HarvesterAPI:
 
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
+                        proof_of_stake = ProofOfStake(new_challenge.stake_height, stake_coefficient)
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
                             quality_str,
                             plot_info.prover.get_size(),
                             difficulty,
                             new_challenge.sp_hash,
-                            difficulty_coefficient,
+                            proof_of_stake.coefficient,
                         )
                         sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
@@ -202,6 +205,7 @@ class HarvesterAPI:
                                         proof_xs,
                                         plot_info.farmer_public_key,
                                     ),
+                                    proof_of_stake,
                                 )
                             )
                 return responses
@@ -216,23 +220,18 @@ class HarvesterAPI:
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._shut_down:
                 return filename, []
-
-            staking_coefficient: Optional[str] = staking_coefficients.get(bytes(plot_info.farmer_public_key))
-            if staking_coefficient is None:
-                return filename, []
-
-            proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
-                self.harvester.executor, blocking_lookup, filename, plot_info, Decimal(staking_coefficient)
+            proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace, ProofOfStake]] = await loop.run_in_executor(
+                self.harvester.executor, blocking_lookup, filename, plot_info
             )
-            for quality_str, proof_of_space in proofs_of_space_and_q:
+            for quality_str, proof_of_space, proof_of_stake in proofs_of_space_and_q:
                 all_responses.append(
                     harvester_protocol.NewProofOfSpace(
                         new_challenge.challenge_hash,
                         new_challenge.sp_hash,
                         quality_str.hex() + str(filename.resolve()),
                         proof_of_space,
+                        proof_of_stake,
                         new_challenge.signage_point_index,
-                        staking_coefficient,
                     )
                 )
             return filename, all_responses
@@ -284,7 +283,7 @@ class HarvesterAPI:
             uint32(passed),
             uint32(total_proofs_found),
             uint32(total),
-            uint64(time_taken * 1_000_000),  # nano seconds,
+            uint64(time_taken * 1_000_000),  # microseconds
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
@@ -305,7 +304,7 @@ class HarvesterAPI:
             },
         )
 
-    @api_request()
+    @api_request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -349,7 +348,7 @@ class HarvesterAPI:
             request.sp_hash,
             local_sk.get_g1(),
             farmer_public_key,
-            message_signatures
+            message_signatures,
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)

@@ -9,6 +9,7 @@ from greenbtc.full_node.fee_estimate import FeeEstimateGroup
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.serialized_program import SerializedProgram
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
+from greenbtc.types.coin_record import CoinRecord
 from greenbtc.types.header_block import HeaderBlock
 from greenbtc.types.spend_bundle import SpendBundle
 from greenbtc.util.ints import uint8, uint32, uint64, uint128
@@ -86,7 +87,6 @@ class RequestBlockHeader(Streamable):
 @dataclass(frozen=True)
 class RespondBlockHeader(Streamable):
     header_block: HeaderBlock
-    difficulty_coefficient: str
 
 
 @streamable
@@ -277,3 +277,31 @@ class RequestFeeEstimates(Streamable):
 @dataclass(frozen=True)
 class RespondFeeEstimates(Streamable):
     estimates: FeeEstimateGroup
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestStakeFarmCount(Streamable):
+    stake_puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondStakeFarmCount(Streamable):
+    count: Optional[uint8]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestCoinRecords(Streamable):
+    include_spent_coins: bool
+    puzzle_hash: bytes32
+    limit: Optional[uint32]
+    start_height: Optional[uint32]
+    end_height: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondCoinRecords(Streamable):
+    coinRecords: List[CoinRecord]

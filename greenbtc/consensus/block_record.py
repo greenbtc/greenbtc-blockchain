@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from greenbtc.consensus.constants import ConsensusConstants
@@ -85,8 +85,8 @@ class BlockRecord(Streamable):
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
-    # the mining farmer's public key
-    farmer_public_key: G1Element
+    # stake
+    farm_puzzle_hash: bytes32
 
     @property
     def is_transaction_block(self) -> bool:

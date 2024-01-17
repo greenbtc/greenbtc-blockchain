@@ -9,6 +9,7 @@ from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from greenbtc.types.blockchain_format.vdf import VDFInfo, VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import uint8, uint32, uint64, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -22,8 +23,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 @dataclass(frozen=True)
 class NewPeakTimelord(Streamable):
     reward_chain_block: RewardChainBlock
+    proof_of_stake: ProofOfStake
     difficulty: uint64
-    difficulty_coefficient: str
     deficit: uint8
     sub_slot_iters: uint64  # SSi in the slot where NewPeak has been infused
     sub_epoch_summary: Optional[
@@ -38,6 +39,7 @@ class NewPeakTimelord(Streamable):
 @dataclass(frozen=True)
 class NewUnfinishedBlockTimelord(Streamable):
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
+    proof_of_stake: ProofOfStake
     difficulty: uint64
     sub_slot_iters: uint64  # SSi in the slot where block is infused
     foliage: Foliage  # Reward chain foliage data
@@ -45,7 +47,6 @@ class NewUnfinishedBlockTimelord(Streamable):
     # This is the last thing infused in the reward chain before this signage point.
     # The challenge that the SP reward chain VDF is based off of, or in the case of sp index 0, the previous infusion
     rc_prev: bytes32
-    difficulty_coefficient: str
 
 
 @streamable

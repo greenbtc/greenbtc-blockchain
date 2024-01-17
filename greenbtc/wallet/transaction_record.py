@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
-from greenbtc.consensus.coinbase import farmer_parent_id, pool_parent_id
+from greenbtc.consensus.coinbase import farmer_parent_id, pool_parent_id, stake_farm_reward_parent_id, \
+    stake_lock_reward_parent_id
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.mempool_inclusion_status import MempoolInclusionStatus
 from greenbtc.types.spend_bundle import SpendBundle
+from greenbtc.types.stake_value import STAKE_FARM_PREFIX
 from greenbtc.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from greenbtc.util.errors import Err
 from greenbtc.util.ints import uint8, uint32, uint64
 from greenbtc.util.streamable import Streamable, streamable
+from greenbtc.wallet.conditions import ConditionValidTimes
 from greenbtc.wallet.util.transaction_type import TransactionType
 
 T = TypeVar("T")
+_T_TransactionRecord = TypeVar("_T_TransactionRecord", bound="TransactionRecordOld")
 
 minimum_send_attempts = 6
 
@@ -22,12 +26,12 @@ minimum_send_attempts = 6
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
     item: T
-    transaction_records: List["TransactionRecord"]
+    transaction_records: List[TransactionRecord]
 
 
 @streamable
 @dataclass(frozen=True)
-class TransactionRecord(Streamable):
+class TransactionRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
     """
@@ -55,33 +59,44 @@ class TransactionRecord(Streamable):
     memos: List[Tuple[bytes32, List[bytes]]]
 
     def is_in_mempool(self) -> bool:
-        # If one of the nodes we sent it to responded with success, we set it to success
+        # If one of the nodes we sent it to responded with success or pending, we return True
         for _, mis, _ in self.sent_to:
-            if MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS:
+            if MempoolInclusionStatus(mis) in (MempoolInclusionStatus.SUCCESS, MempoolInclusionStatus.PENDING):
                 return True
-        # Note, transactions pending inclusion (pending) return false
         return False
 
     def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:
         if not self.confirmed:
             return None
-        if self.type == TransactionType.FEE_REWARD or self.type == TransactionType.COINBASE_REWARD:
+        if (
+            self.type == TransactionType.FEE_REWARD
+            or self.type == TransactionType.COINBASE_REWARD
+            or self.type == TransactionType.STAKE_FARM_REWARD
+            or self.type == TransactionType.STAKE_LOCK_REWARD
+        ):
             for block_index in range(self.confirmed_at_height, self.confirmed_at_height - 100, -1):
                 if block_index < 0:
                     return None
-                pool_parent = pool_parent_id(uint32(block_index), genesis_challenge)
-                farmer_parent = farmer_parent_id(uint32(block_index), genesis_challenge)
+                height = uint32(block_index)
+                pool_parent = pool_parent_id(height, genesis_challenge)
+                farmer_parent = farmer_parent_id(height, genesis_challenge)
                 if pool_parent == self.additions[0].parent_coin_info:
-                    return uint32(block_index)
+                    return height
                 if farmer_parent == self.additions[0].parent_coin_info:
-                    return uint32(block_index)
+                    return height
+                stake_farm_parent = stake_farm_reward_parent_id(height, genesis_challenge)
+                if stake_farm_parent == self.additions[0].parent_coin_info:
+                    return height
+                stake_lock_parent = stake_lock_reward_parent_id(height, genesis_challenge)
+                if stake_lock_parent == self.additions[0].parent_coin_info:
+                    return height
         return None
 
     def get_memos(self) -> Dict[bytes32, List[bytes]]:
         return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls, modified_tx_input: Dict):
+    def from_json_dict_convenience(cls: Type[_T_TransactionRecord], modified_tx_input: Dict) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
@@ -101,8 +116,13 @@ class TransactionRecord(Streamable):
         return cls.from_json_dict(modified_tx)
 
     def to_json_dict_convenience(self, config: Dict) -> Dict:
-        selected = config["selected_network"]
-        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+        if self.type == TransactionType.INCOMING_STAKE_FARM_RECEIVE.value or (
+            self.type == TransactionType.OUTGOING_STAKE_FARM.value
+        ):
+            prefix = STAKE_FARM_PREFIX
+        else:
+            selected = config["selected_network"]
+            prefix = config["network_overrides"]["config"][selected]["address_prefix"]
         formatted = self.to_json_dict()
         formatted["to_address"] = encode_puzzle_hash(self.to_puzzle_hash, prefix)
         formatted["memos"] = {
@@ -124,3 +144,12 @@ class TransactionRecord(Streamable):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False
+
+    def hint_dict(self) -> Dict[bytes32, bytes32]:
+        return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
+
+
+@streamable
+@dataclass(frozen=True)
+class TransactionRecord(TransactionRecordOld):
+    valid_times: ConditionValidTimes

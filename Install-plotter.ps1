@@ -16,7 +16,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$DEFAULT_BLADEBIT_VERSION = "v3.0.0"
+$DEFAULT_BLADEBIT_VERSION = "v3.1.0"
 $DEFAULT_MADMAX_VERSION = "0.0.2"
 $VERSION = $v
 $OS = "windows"
@@ -84,7 +84,7 @@ function Get-BladebitUrl()
         [string]$arch
     )
 
-    $GITHUB_BASE_URL = "https://github.com/GreenBTC-Network/bladebit/releases/download"
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/bladebit/releases/download"
     $filename = Get-BladebitFilename -ver $ver -os $os -arch $arch
 
     "${GITHUB_BASE_URL}/${ver}/${filename}"
@@ -98,7 +98,7 @@ function Get-BladebitCudaUrl()
         [string]$arch
     )
 
-    $GITHUB_BASE_URL = "https://github.com/GreenBTC-Network/bladebit/releases/download"
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/bladebit/releases/download"
     $filename = Get-BladebitCudaFilename -ver $ver -os $os -arch $arch
 
     "${GITHUB_BASE_URL}/${ver}/${filename}"
@@ -113,10 +113,10 @@ function Get-MadmaxFilename()
         [string]$arch
     )
 
-    $chia_plot = "chia_plot"
+    $greenbtc_plot = "greenbtc_plot"
     if ("${ksize}" -eq "k34")
     {
-        $chia_plot = "chia_plot_k34"
+        $greenbtc_plot = "greenbtc_plot_k34"
     }
     $suffix = ""
     if ("${os}" -eq "macos")
@@ -132,7 +132,7 @@ function Get-MadmaxFilename()
         $suffix = "-${arch}"
     }
 
-    "${chia_plot}-${ver}${suffix}"
+    "${greenbtc_plot}-${ver}${suffix}"
 }
 
 function Get-MadmaxUrl()
@@ -144,7 +144,7 @@ function Get-MadmaxUrl()
         [string]$arch
     )
 
-    $GITHUB_BASE_URL = "https://github.com/greenbtc/greenbtc-plotter-madmax/releases/download"
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
     $madmax_filename = Get-MadmaxFilename -ksize $ksize -ver $ver -os $os -arch $arch
 
     "${GITHUB_BASE_URL}/${ver}/${madmax_filename}"
@@ -225,11 +225,11 @@ try {
 
         $url = Get-MadmaxUrl -ksize "k32" -ver $version -os $os -arch $arch
         $dest_dir = $PWD
-        Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k32.exe"
+        Get-Binary -url $url -dest_dir $dest_dir -new_filename "greenbtc_plot_k32.exe"
 
         $url = Get-MadmaxUrl -ksize "k34" -ver $version -os $os -arch $arch
         $dest_dir = $PWD
-        Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k34.exe"
+        Get-Binary -url $url -dest_dir $dest_dir -new_filename "greenbtc_plot_k34.exe"
     }
     else
     {

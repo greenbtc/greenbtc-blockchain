@@ -4,8 +4,7 @@ import io
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from blspy import G1Element, G2Element
-from chia_rs import serialized_length
+from chia_rs import G1Element, G2Element, serialized_length
 from chiabip158 import PyBIP158
 
 from greenbtc.types.blockchain_format.coin import Coin
@@ -129,6 +128,11 @@ def skip_proof_of_space(buf: memoryview) -> memoryview:
     return skip_g1_element(buf)  # farmer_public_key
 
 
+def skip_proof_of_stake(buf: memoryview) -> memoryview:
+    buf = skip_uint32(buf)  # height
+    return skip_uint64(buf)  # coefficient
+
+
 def skip_reward_chain_block(buf: memoryview) -> memoryview:
     buf = skip_uint128(buf)  # weight
     buf = skip_uint32(buf)  # height
@@ -210,6 +214,7 @@ def skip_transactions_info(buf: memoryview) -> memoryview:
 def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf = skip_proof_of_stake(buf)  # proof_of_stake
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
     buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
     buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
@@ -239,6 +244,7 @@ class GeneratorBlockInfo:
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf = skip_proof_of_stake(buf)  # proof_of_stake
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
     buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
     buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
@@ -275,6 +281,7 @@ def header_block_from_block(
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf2 = skip_reward_chain_block(buf2)  # reward_chain_block
+    buf2 = skip_proof_of_stake(buf2)  # proof_of_stake
     buf2 = skip_optional(buf2, skip_vdf_proof)  # challenge_chain_sp_proof
     buf2 = skip_vdf_proof(buf2)  # challenge_chain_ip_proof
     buf2 = skip_optional(buf2, skip_vdf_proof)  # reward_chain_sp_proof

@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from decimal import Decimal
-from blspy import G1Element
-
 from greenbtc.consensus.block_record import BlockRecord
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -44,6 +41,9 @@ class BlockchainInterface:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        return  # type: ignore[return-value]
+
     def remove_block_record(self, header_hash: bytes32) -> None:
         pass
 
@@ -64,14 +64,17 @@ class BlockchainInterface:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
 
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        return  # type: ignore[return-value]
+
     async def get_header_blocks_in_range(
-            self, start: int, stop: int, tx_filter: bool = True
+        self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
 
     async def get_header_block_by_height(
-            self, height: int, header_hash: bytes32, tx_filter: bool = True
+        self, height: int, header_hash: bytes32, tx_filter: bool = True
     ) -> Optional[HeaderBlock]:
         pass
 
@@ -85,22 +88,16 @@ class BlockchainInterface:
         return None
 
     async def persist_sub_epoch_challenge_segments(
-            self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
         pass
 
     async def get_sub_epoch_challenge_segments(
-            self,
-            sub_epoch_summary_hash: bytes32,
+        self,
+        sub_epoch_summary_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         pass
 
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
-
-    # staking
-    async def get_staking_coefficient(
-            self, height: uint32, farmer_public_key: G1Element
-    ) -> Decimal:
-        raise NotImplementedError("get_farmer_difficulty_coefficient not implemented")

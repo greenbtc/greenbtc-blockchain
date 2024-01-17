@@ -57,10 +57,10 @@ class LastState:
             _, self.last_ip = iters_from_block(
                 self.constants,
                 state.reward_chain_block,
+                state.proof_of_stake,
                 state.sub_slot_iters,
                 state.difficulty,
                 state.reward_chain_block.height,
-                state.difficulty_coefficient,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary

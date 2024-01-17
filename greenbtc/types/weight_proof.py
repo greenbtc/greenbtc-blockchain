@@ -9,6 +9,7 @@ from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.vdf import VDFInfo, VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
 from greenbtc.types.header_block import HeaderBlock
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import uint8, uint32, uint64, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -38,6 +39,7 @@ class SubEpochData(Streamable):
 class SubSlotData(Streamable):
     # if infused
     proof_of_space: Optional[ProofOfSpace]
+    proof_of_stake: Optional[ProofOfStake]
     # VDF to signage point
     cc_signage_point: Optional[VDFProof]
     # VDF from signage to infusion point
@@ -102,4 +104,3 @@ class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
     recent_chain_data: List[HeaderBlock]
-    difficulty_coefficients: List[str]

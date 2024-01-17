@@ -1,0 +1,17 @@
+[Unit]
+Description=GreenBTC Wallet Service for %i
+Requires=greenbtc-daemon@%i.service
+After=greenbtc-daemon@%i.service
+
+[Service]
+Type=simple
+Environment=GREENBTC_ROOT=/home/%i/.greenbtc/mainnet
+ExecStart=/opt/greenbtc/greenbtc_wallet
+ExecStartPost=/bin/bash -c '(while ! nc -z -v -w1 localhost 9256 2>/dev/null; do echo "Waiting for the wallet to listen on port 9256..."; sleep 1; done); sleep 1'
+User=%i
+Group=%i
+LimitNOFILE=1048576
+LimitNPROC=1048576
+
+[Install]
+WantedBy=multi-user.target

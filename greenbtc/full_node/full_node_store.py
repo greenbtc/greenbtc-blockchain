@@ -18,7 +18,7 @@ from greenbtc.protocols import timelord_protocol
 from greenbtc.server.outbound_message import Message
 from greenbtc.types.blockchain_format.classgroup import ClassgroupElement
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
-from greenbtc.types.blockchain_format.vdf import VDFInfo
+from greenbtc.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
 from greenbtc.types.full_block import FullBlock
 from greenbtc.types.generator_types import CompressorArg
@@ -128,7 +128,7 @@ class FullNodeStore:
     def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
         for key, value in self.candidate_blocks.items():
-            if value[0] < height:
+            if value[0] < height or value[1].proof_of_stake.height < height:
                 del_keys.append(key)
         for key in del_keys:
             try:
@@ -177,7 +177,7 @@ class FullNodeStore:
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_keys: List[bytes32] = []
         for partial_reward_hash, (unf_height, unfinished_block, _) in self.unfinished_blocks.items():
-            if unf_height < height:
+            if unf_height < height or unfinished_block.proof_of_stake.height < height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
             del self.unfinished_blocks[del_key]
@@ -441,27 +441,24 @@ class FullNodeStore:
             number_of_iterations=sub_slot_iters,
         ):
             return None
-        if (
-            not eos.proofs.challenge_chain_slot_proof.normalized_to_identity
-            and not eos.proofs.challenge_chain_slot_proof.is_valid(
-                self.constants,
-                cc_start_element,
-                partial_cc_vdf_info,
-            )
+        if not eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
+            eos.proofs.challenge_chain_slot_proof,
+            self.constants,
+            cc_start_element,
+            partial_cc_vdf_info,
         ):
             return None
-        if (
-            eos.proofs.challenge_chain_slot_proof.normalized_to_identity
-            and not eos.proofs.challenge_chain_slot_proof.is_valid(
-                self.constants,
-                ClassgroupElement.get_default_element(),
-                eos.challenge_chain.challenge_chain_end_of_slot_vdf,
-            )
+        if eos.proofs.challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
+            eos.proofs.challenge_chain_slot_proof,
+            self.constants,
+            ClassgroupElement.get_default_element(),
+            eos.challenge_chain.challenge_chain_end_of_slot_vdf,
         ):
             return None
 
         # Validate reward chain VDF
-        if not eos.proofs.reward_chain_slot_proof.is_valid(
+        if not validate_vdf(
+            eos.proofs.reward_chain_slot_proof,
             self.constants,
             ClassgroupElement.get_default_element(),
             eos.reward_chain.end_of_slot_vdf,
@@ -495,20 +492,15 @@ class FullNodeStore:
                 number_of_iterations=icc_iters,
             ):
                 return None
-            if (
-                not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                    self.constants, icc_start_element, partial_icc_vdf_info
-                )
+            if not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
+                eos.proofs.infused_challenge_chain_slot_proof, self.constants, icc_start_element, partial_icc_vdf_info
             ):
                 return None
-            if (
-                eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                    self.constants,
-                    ClassgroupElement.get_default_element(),
-                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                )
+            if eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity and not validate_vdf(
+                eos.proofs.infused_challenge_chain_slot_proof,
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
             ):
                 return None
         else:
@@ -634,14 +626,16 @@ class FullNodeStore:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
-                    if not signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
+                    if not signage_point.cc_proof.normalized_to_identity and not validate_vdf(
+                        signage_point.cc_proof,
                         self.constants,
                         start_ele,
                         cc_vdf_info_expected,
                     ):
                         self.add_to_future_sp(signage_point, index)
                         return False
-                    if signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
+                    if signage_point.cc_proof.normalized_to_identity and not validate_vdf(
+                        signage_point.cc_proof,
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.cc_vdf,
@@ -655,7 +649,8 @@ class FullNodeStore:
                     return False
 
                 if not skip_vdf_validation:
-                    if not signage_point.rc_proof.is_valid(
+                    if not validate_vdf(
+                        signage_point.rc_proof,
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.rc_vdf,
@@ -835,7 +830,8 @@ class FullNodeStore:
             if eos_op is not None:
                 self.recent_eos.put(eos_op.challenge_chain.get_hash(), (eos_op, time.time()))
 
-        return FullNodeStorePeakResult(new_eos, new_sps, new_ips)
+        # Only forward the last 4 SPs that we have cached, as others will be too old
+        return FullNodeStorePeakResult(new_eos, sorted(new_sps)[-4:], new_ips)
 
     def get_finished_sub_slots(
         self,

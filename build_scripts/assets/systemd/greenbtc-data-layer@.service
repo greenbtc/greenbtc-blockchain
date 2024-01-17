@@ -1,0 +1,17 @@
+[Unit]
+Description=GreenBTC Data Layer Service for %i
+Requires=greenbtc-daemon@%i.service
+After=greenbtc-daemon@%i.service
+
+[Service]
+Type=simple
+Environment=GREENBTC_ROOT=/home/%i/.greenbtc/mainnet
+ExecStart=/opt/greenbtc/greenbtc_data_layer
+User=%i
+Group=%i
+LimitNOFILE=1048576
+LimitNPROC=1048576
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

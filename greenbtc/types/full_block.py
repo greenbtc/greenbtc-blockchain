@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import List, Optional
 
 from greenbtc.types.blockchain_format.coin import Coin
 from greenbtc.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
@@ -10,6 +10,7 @@ from greenbtc.types.blockchain_format.serialized_program import SerializedProgra
 from greenbtc.types.blockchain_format.sized_bytes import bytes32
 from greenbtc.types.blockchain_format.vdf import VDFProof
 from greenbtc.types.end_of_slot_bundle import EndOfSubSlotBundle
+from greenbtc.types.stake_value import ProofOfStake
 from greenbtc.util.ints import uint32, uint128
 from greenbtc.util.streamable import Streamable, streamable
 
@@ -20,6 +21,7 @@ class FullBlock(Streamable):
     # All the information required to validate a block
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_block: RewardChainBlock  # Reward chain trunk data
+    proof_of_stake: ProofOfStake  # proof of stake
     challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     challenge_chain_ip_proof: VDFProof
     reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
@@ -56,11 +58,11 @@ class FullBlock(Streamable):
     def is_transaction_block(self) -> bool:
         return self.foliage_transaction_block is not None
 
-    def get_included_reward_coins(self) -> Set[Coin]:
+    def get_included_reward_coins(self) -> List[Coin]:
         if not self.is_transaction_block():
-            return set()
+            return []
         assert self.transactions_info is not None
-        return set(self.transactions_info.reward_claims_incorporated)
+        return self.transactions_info.reward_claims_incorporated
 
     def is_fully_compactified(self) -> bool:
         for sub_slot in self.finished_sub_slots:
