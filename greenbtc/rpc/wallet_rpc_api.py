@@ -14,7 +14,7 @@ from clvm_tools.binutils import assemble
 from greenbtc.consensus.block_rewards import calculate_base_farmer_reward, MOJO_PER_GBTC
 from greenbtc.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from greenbtc.data_layer.data_layer_wallet import DataLayerWallet
-from greenbtc.pools.pool_puzzles import create_p2_singleton_puzzle, SINGLETON_MOD_HASH
+from greenbtc.pools.pool_puzzles import create_p2_singleton_puzzle, POOL_OUTER_MOD_HASH
 from greenbtc.pools.pool_wallet import PoolWallet
 from greenbtc.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from greenbtc.protocols.protocol_message_types import ProtocolMessageTypes
@@ -4436,56 +4436,51 @@ class WalletRpcApi:
     async def _get_pool_nft_program_puzzle(
         self,
         launcher_id: bytes32,
-        contract_ph: Optional[bytes32],
+        contract_address: str,
         delay: uint64,
     ) -> Optional[Program]:
-        puzzle_hashes = await self.service.wallet_state_manager.puzzle_store.get_all_puzzle_hashes()
+        delayed_puzzle_hash: Optional[bytes32] = self.pool_nft_puzzle_hash.get(launcher_id)
         program_puzzle: Optional[Program] = None
-        if contract_ph is None:
-            for puzzle_hash in puzzle_hashes:
-                puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, delay, puzzle_hash)
-                if len(await self.service.request_coin_records_by_puzzle_hash(
-                    puzzle.get_tree_hash(),
-                    True,
-                    uint32(1),
-                )) > 0:
-                    program_puzzle = puzzle
-                    self.pool_nft_puzzle_hash[launcher_id] = puzzle_hash
-                    break
+        if delayed_puzzle_hash is None:
+            contract_ph: Optional[bytes32] = decode_puzzle_hash(contract_address) if contract_address != "" else None
+            puzzle_hashes = await self.service.wallet_state_manager.puzzle_store.get_all_puzzle_hashes(1)
+            if contract_ph is None:
+                for puzzle_hash in puzzle_hashes:
+                    puzzle = create_p2_singleton_puzzle(POOL_OUTER_MOD_HASH, launcher_id, delay, puzzle_hash)
+                    coin_records = await self.service.request_coin_records_by_puzzle_hash(
+                        puzzle.get_tree_hash(),
+                        True,
+                        uint32(1),
+                    )
+                    if len(coin_records) > 0:
+                        program_puzzle = puzzle
+                        self.pool_nft_puzzle_hash[launcher_id] = puzzle_hash
+                        break
+            else:
+                for puzzle_hash in puzzle_hashes:
+                    puzzle = create_p2_singleton_puzzle(POOL_OUTER_MOD_HASH, launcher_id, delay, puzzle_hash)
+                    if contract_ph == puzzle.get_tree_hash():
+                        program_puzzle = puzzle
+                        self.pool_nft_puzzle_hash[launcher_id] = puzzle_hash
+                        break
         else:
-            for puzzle_hash in puzzle_hashes:
-                puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, delay, puzzle_hash)
-                if contract_ph == puzzle.get_tree_hash():
-                    program_puzzle = puzzle
-                    self.pool_nft_puzzle_hash[launcher_id] = puzzle_hash
-                    break
+            program_puzzle = create_p2_singleton_puzzle(POOL_OUTER_MOD_HASH, launcher_id, delay, delayed_puzzle_hash)
         return program_puzzle
 
     async def find_pool_nft(self, request) -> EndpointResult:
         launcher_hash = request.get("launcher_id", "")
         contract_address = request.get("contract_address", "")
         if not (len(launcher_hash) == 66 or len(launcher_hash) == 64):
-            return {"error": "bad launcher id"}
+            return {"success": False, "error": "bad launcher id"}
 
-        total_amount = 0
-        record_amount = 0
         delay: uint64 = uint64(604800)
         launcher_id = bytes32(hexstr_to_bytes(launcher_hash))
-        puzzle_hash: Optional[bytes32] = self.pool_nft_puzzle_hash.get(launcher_id)
-        contract_ph: Optional[bytes32] = decode_puzzle_hash(contract_address) if contract_address != "" else None
-        if puzzle_hash is None:
-            program_puzzle = await self._get_pool_nft_program_puzzle(launcher_id, contract_ph, delay)
-            if program_puzzle is not None:
-                puzzle_hash = self.pool_nft_puzzle_hash.get(launcher_id)
-            else:
-                return {"error": "the nft doesn't belong to you"}
-        else:
-            program_puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, delay, puzzle_hash)
-        if contract_address == "":
-            contract_ph = program_puzzle.get_tree_hash()
-            selected = self.service.config["selected_network"]
-            prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-            contract_address = encode_puzzle_hash(contract_ph, prefix)
+        program_puzzle = await self._get_pool_nft_program_puzzle(launcher_id, contract_address, delay)
+        if program_puzzle is None:
+            return {"success": False, "error": "the nft doesn't belong to you"}
+        total_amount = 0
+        record_amount = 0
+        contract_ph = program_puzzle.get_tree_hash()
         coin_records = await self.service.request_coin_records_by_puzzle_hash(contract_ph)
         for coin_record in coin_records:
             amount = uint64(coin_record.coin.amount)
@@ -4493,8 +4488,8 @@ class WalletRpcApi:
                 record_amount += amount
             total_amount += amount
         return {
-            "contract_address": contract_address,
-            "delayed_puzzle_hash": puzzle_hash,
+            "contract_address": encode_puzzle_hash(contract_ph, "xch"),
+            "delayed_puzzle_hash": self.pool_nft_puzzle_hash.get(launcher_id),
             "total_amount": total_amount,
             "balance_amount": total_amount - record_amount,
             "record_amount": record_amount,
@@ -4509,58 +4504,43 @@ class WalletRpcApi:
         contract_address = request.get("contract_address", "")
         fee = uint64(request.get("fee", 0))
         if not (len(launcher_hash) == 66 or len(launcher_hash) == 64):
-            return {"error": "bad launcher id"}
-
-        data = {"contract_address": "", "status": ""}
+            return {"success": False, "error": "bad launcher id"}
         try:
             delay: uint64 = uint64(604800)
             launcher_id = bytes32(hexstr_to_bytes(launcher_hash))
-            puzzle_hash: Optional[bytes32] = self.pool_nft_puzzle_hash.get(launcher_id)
-            contract_ph: Optional[bytes32] = decode_puzzle_hash(contract_address) if contract_address != "" else None
-            if puzzle_hash is None:
-                program_puzzle = await self._get_pool_nft_program_puzzle(launcher_id, contract_ph, delay)
-                if program_puzzle is None:
-                    assert False, "the nft doesn't belong to you"
-            else:
-                program_puzzle = create_p2_singleton_puzzle(SINGLETON_MOD_HASH, launcher_id, delay, puzzle_hash)
-            if contract_address == "":
-                contract_ph = program_puzzle.get_tree_hash()
-                selected = self.service.config["selected_network"]
-                prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-                contract_address = encode_puzzle_hash(contract_ph, prefix)
+            program_puzzle = await self._get_pool_nft_program_puzzle(launcher_id, contract_address, delay)
+            if program_puzzle is None:
+                return {"success": False, "error": "the nft doesn't belong to you"}
+
             coin_spends: List[CoinSpend] = []
             total_amount = 0
             record_amount = 0
             first_coin_record = None
+            contract_ph = program_puzzle.get_tree_hash()
             coin_records = await self.service.request_coin_records_by_puzzle_hash(contract_ph)
-            for coin_record in coin_records:
-                amount = uint64(coin_record.coin.amount)
-                if coin_record.timestamp <= uint64(time.time()) - delay:
-                    if first_coin_record is None:
-                        first_coin_record = coin_record
-                    if len(coin_spends) >= 100:
-                        # Limit the total number of spends, so the SpendBundle fits into the block
-                        log.info(f"pool wallet truncating absorb to 100 spends to fit into block")
-                        print(f"pool wallet truncating absorb to 100 spends to fit into block")
-                        break
-                    absorb_spend = CoinSpend(
-                        coin=coin_record.coin,
-                        puzzle_reveal=SerializedProgram.from_program(program_puzzle),
-                        solution=SerializedProgram.from_program(Program.to([amount, 0])),
-                    )
-                    coin_spends += absorb_spend
-                    record_amount += amount
-                total_amount += amount
-            data["contract_address"] = contract_address
-            data["num"] = len(coin_spends)
-            data["amount"] = record_amount
-            data["total_amount"] = total_amount
+            if len(coin_records) > 0:
+                for coin_record in coin_records:
+                    amount = uint64(coin_record.coin.amount)
+                    if coin_record.timestamp <= uint64(time.time()) - delay:
+                        if first_coin_record is None:
+                            first_coin_record = coin_record
+                        if len(coin_spends) >= 100:
+                            # Limit the total number of spends, so the SpendBundle fits into the block
+                            log.info(f"pool wallet truncating absorb to 100 spends to fit into block")
+                            print(f"pool wallet truncating absorb to 100 spends to fit into block")
+                            break
+                        absorb_spend = CoinSpend(
+                            coin=coin_record.coin,
+                            puzzle_reveal=SerializedProgram.from_program(program_puzzle),
+                            solution=SerializedProgram.from_program(Program.to([amount, 0])),
+                        )
+                        coin_spends.append(absorb_spend)
+                        record_amount += amount
+                    total_amount += amount
             if len(coin_spends) > 0:
                 claim_spend: SpendBundle = SpendBundle(coin_spends, G2Element())
-
                 # If fee is 0, no signatures are required to absorb
                 full_spend: SpendBundle = claim_spend
-
                 fee_tx = None
                 if fee > 0:
                     absorb_announce = Announcement(first_coin_record.coin.name(), b"$")
@@ -4607,14 +4587,19 @@ class WalletRpcApi:
                 # await self.service.wallet_state_manager.add_pending_transaction(absorb_transaction)
                 # data["status"] = 1
                 await self.service.push_tx(full_spend)
-                data["status"] = 1
                 if fee_tx is not None:
                     await self.service.wallet_state_manager.add_pending_transaction(dataclasses.replace(
                         fee_tx, spend_bundle=None
                     ))
+            return {
+                "status": "SUCCESS",
+                "num": len(coin_spends),
+                "amount": record_amount,
+                "total_amount": total_amount,
+            }
         except Exception as e:
             log.error(f"Exception from 'recover_pool_nft' {e}")
-        return data
+            return {"success": False, "error": str(e)}
 
     ##########################################################################################
     # Wallet Stake Management

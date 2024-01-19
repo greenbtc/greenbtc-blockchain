@@ -612,7 +612,8 @@ class WalletNode:
                     peer = item.data[1]
                     assert peer is not None
                     await self.new_peak_wallet(new_peak, peer)
-                    await self.wallet_state_manager.auto_withdraw_stake_coins()
+                    if self.config.get("auto_withdraw_stake", {}).get("enabled", True):
+                        await self.wallet_state_manager.auto_withdraw_stake_coins()
                     # Check if any coin needs auto spending
                     if self.config.get("auto_claim", {}).get("enabled", False):
                         await self.wallet_state_manager.auto_claim_coins()
