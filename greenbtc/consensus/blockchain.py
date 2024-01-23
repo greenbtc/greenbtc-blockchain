@@ -1379,12 +1379,6 @@ class Blockchain(BlockchainInterface):
                     coefficient = round(0.05 + 1 / (stake_amount / space / 10 + 0.05), 15)
 
                 return uint64(int(coefficient * STAKE_PER_COEFFICIENT))
-                # stake_amount_real = sum(int(stakeRecord.amount) for stakeRecord in stake_records)
-                # log.debug(
-                #     f"height: {height}, stake: {stake_amount / MOJO_PER_GBTC}, coefficient: {coefficient}, "
-                #     f"space : {space / (1024 ** 4):.5f} TiB network space: {network_space / (1024 ** 4):.5f} TiB, "
-                #     f"blocks: {blocks}, timestamp {curr.timestamp}, {stake_puzzle_hash.hex()}"
-                # )
 
         return None
 
@@ -1395,7 +1389,7 @@ class Blockchain(BlockchainInterface):
         ):
             return self.__height_in_stake_coefficients[height][stake_puzzle_hash]
 
-        if self._peak_height is not None and self._peak_height > self.constants.HARD_FORK2_HEIGHT:
+        if height > self.constants.HARD_FORK2_HEIGHT:
             stake_coefficient = await self.get_stake_coefficient_new(height, stake_puzzle_hash)
         else:
             stake_coefficient = await self.get_stake_coefficient_old(height, stake_puzzle_hash)
