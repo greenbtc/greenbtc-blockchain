@@ -189,15 +189,14 @@ class BlockHeightMap:
 
         try:
             async with aiofiles.open(self.__height_to_farm_filename, "r+b") as f:
-                map_buf = self.__height_to_farm[offset:].copy()
+               farm_buf = self.__height_to_farm[offset:].copy()
                 await f.seek(offset)
-                await f.write(map_buf)
+                await f.write(farm_buf)
         except Exception:
             # if the file doesn't exist, write the whole buffer
             async with aiofiles.open(self.__height_to_farm_filename, "wb") as f:
-                map_buf = self.__height_to_farm.copy()
-                await f.seek(offset)
-                await f.write(map_buf)
+                farm_buf = self.__height_to_farm.copy()
+                await f.write(farm_buf)
 
         self.__first_dirty = len(self.__height_to_hash) // 32
         assert self.__first_dirty == len(self.__height_to_farm) // 32
