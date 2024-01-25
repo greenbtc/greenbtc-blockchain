@@ -159,6 +159,7 @@ class BlockHeightMap:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
         assert height * 32 <= len(self.__height_to_hash)
+        assert height * 32 <= len(self.__height_to_farm)
         self.__set_hash(height, header_hash, farm_puzzle_hash)
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
@@ -168,6 +169,7 @@ class BlockHeightMap:
             return
 
         assert (len(self.__height_to_hash) % 32) == 0
+        assert (len(self.__height_to_farm) % 32) == 0
         offset = self.__first_dirty * 32
 
         ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
@@ -194,9 +196,11 @@ class BlockHeightMap:
             # if the file doesn't exist, write the whole buffer
             async with aiofiles.open(self.__height_to_farm_filename, "wb") as f:
                 map_buf = self.__height_to_farm.copy()
+                await f.seek(offset)
                 await f.write(map_buf)
 
         self.__first_dirty = len(self.__height_to_hash) // 32
+        assert self.__first_dirty == len(self.__height_to_farm) // 32
         await write_file_async(self.__ses_filename, ses_buf)
 
     # load height-to-hash map entries from the DB starting at height back in

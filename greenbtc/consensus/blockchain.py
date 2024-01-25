@@ -129,7 +129,6 @@ class Blockchain(BlockchainInterface):
     # staking cache
     __height_in_stake_coefficients: Dict[uint32, Dict[bytes32, uint64]]
     __height_in_network_space: Dict[uint32, uint128]
-    __key_in_coefficient: Dict[uint32, Dict[bytes, uint64]]
 
     # Lock to prevent simultaneous reads and writes
     priority_mutex: PriorityMutex[BlockchainMutexPriority]
@@ -194,7 +193,6 @@ class Blockchain(BlockchainInterface):
         self.__heights_in_cache = {}
         self.__height_in_stake_coefficients = {}
         self.__height_in_network_space = {}
-        self.__key_in_coefficient = {}
         block_records, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
         for block in block_records.values():
             self.add_block_record(block)
@@ -440,6 +438,8 @@ class Blockchain(BlockchainInterface):
                 block.proof_of_stake,
                 block.reward_chain_block.proof_of_space.farmer_public_key,
         ):
+            if block.proof_of_stake.height in self.__height_in_stake_coefficients:
+                self.__height_in_stake_coefficients[block.proof_of_stake.height].clear()
             log.error(f"validate block height {block.height} stake coefficient error")
             return AddBlockResult.INVALID_BLOCK, Err.INVALID_STAKE_COEFFICIENT, None
 
@@ -984,11 +984,6 @@ class Blockchain(BlockchainInterface):
             return None
         return self.__height_map.get_hash(height)
 
-    def height_to_farm(self, height: uint32) -> Optional[bytes32]:
-        if not self.__height_map.contains_height_farm(height):
-            return None
-        return self.__height_map.get_farm(height)
-
     def contains_height(self, height: uint32) -> bool:
         return self.__height_map.contains_height(height)
 
@@ -1326,7 +1321,8 @@ class Blockchain(BlockchainInterface):
             self.__height_in_network_space[height] = network_space
         return network_space
 
-    async def get_stake_coefficient_old(self, height: uint32, stake_puzzle_hash: bytes32) -> Optional[uint64]:
+    async def get_stake_coefficient_old(self, height: uint32, stake_puzzle_hash: bytes32) -> uint64:
+        coefficient = 20
         if height > 2:
             block_range = 4608 * 3
             blocks = self.__height_map.get_height_farm_count(
@@ -1344,43 +1340,39 @@ class Blockchain(BlockchainInterface):
                     coefficient = round(0.2 + 1 / (stake_amount / space / 2 + 0.25), 15)
                 else:
                     coefficient = round(0.05 + 1 / (stake_amount / space / 2 + 0.05), 15)
-                return uint64(int(coefficient * STAKE_PER_COEFFICIENT))
-        return None
+        return uint64(int(coefficient * STAKE_PER_COEFFICIENT))
 
-    async def get_stake_coefficient_new(self, height: uint32, stake_puzzle_hash: bytes32) -> Optional[uint64]:
-        curr: Optional[BlockRecord] = None
+    async def get_stake_coefficient_new(self, height: uint32, stake_puzzle_hash: bytes32) -> uint64:
         header_hash = self.height_to_hash(height)
-        if header_hash is not None:
-            curr = await self.get_block_record_from_db(header_hash)
-            while not curr.is_transaction_block:
-                curr = self.block_record(curr.prev_hash)
-        if curr is not None and curr.timestamp is not None:
-            block_range = 4608 * 14
+        assert header_hash is not None
+        curr = self.block_record(header_hash)
+        while curr is not None and not curr.is_transaction_block:
+            curr = self.block_record(curr.prev_hash)
+        block_range = 4608 * 14
+        blocks = self.__height_map.get_height_farm_count(
+            height - block_range,
+            height,
+            stake_puzzle_hash,
+        )
+        stake_records = await self.stake_record_store.get_stake_farm_records_thin(
+            stake_puzzle_hash, curr.height, curr.timestamp
+        )
 
-            blocks = self.__height_map.get_height_farm_count(
-                height - block_range,
-                height,
-                stake_puzzle_hash,
-            )
-            stake_records = await self.stake_record_store.get_stake_farm_records_thin(
-                stake_puzzle_hash, curr.height, curr.timestamp
-            )
-            stake_amount = sum(
-                get_stake_value(stake.stake_type, stake.is_stake_farm).reward_amount(stake.amount)
-                for stake in stake_records
-            )
-            network_space = await self.get_stake_height_network_space(4608, height)
+        stake_amount = sum(
+            get_stake_value(stake.stake_type, stake.is_stake_farm).reward_amount(stake.amount)
+            for stake in stake_records
+        )
+        network_space = await self.get_stake_height_network_space(4608, height)
 
-            space = int(network_space) * blocks / (block_range if height > block_range else height)
-            if network_space != 0 and stake_amount > 0:
-                if space == 0 or blocks == 0:
-                    coefficient = 1
-                else:
-                    coefficient = round(0.05 + 1 / (stake_amount / space / 10 + 0.05), 15)
-
-                return uint64(int(coefficient * STAKE_PER_COEFFICIENT))
-
-        return None
+        space = int(network_space) * blocks / (block_range if height > block_range else height)
+        if network_space != 0 and stake_amount > 0:
+            if space == 0 or blocks == 0:
+                coefficient = 1
+            else:
+                coefficient = round(0.05 + 1 / (stake_amount / space / 10 + 0.05), 15)
+        else:
+            coefficient = 20
+        return uint64(int(coefficient * STAKE_PER_COEFFICIENT))
 
     async def get_stake_coefficient(self, height: uint32, farmer_public_key: G1Element) -> uint64:
         stake_puzzle_hash = create_puzzlehash_for_pk(farmer_public_key)
@@ -1393,9 +1385,6 @@ class Blockchain(BlockchainInterface):
             stake_coefficient = await self.get_stake_coefficient_new(height, stake_puzzle_hash)
         else:
             stake_coefficient = await self.get_stake_coefficient_old(height, stake_puzzle_hash)
-        if stake_coefficient is None:
-            stake_coefficient = uint64(20 * STAKE_PER_COEFFICIENT)
-
         if height not in self.__height_in_stake_coefficients:
             self.__height_in_stake_coefficients[height] = {}
         self.__height_in_stake_coefficients[height][stake_puzzle_hash] = stake_coefficient
